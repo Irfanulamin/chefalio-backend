@@ -30,4 +30,57 @@ export class UserService {
       .select('-password -__v -_id -createdAt -updatedAt');
     return userDetails;
   }
+
+  async getAllUsers(
+    page: number = 1,
+    limit: number = 10,
+    role?: 'user' | 'chef' | 'admin',
+    search: string = '',
+  ) {
+    const filter: any = {};
+
+    if (role) {
+      filter.role = role;
+    }
+
+    if (search) {
+      filter.$or = [
+        { username: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const total = await this.userModel.countDocuments(filter);
+
+    const data = await this.userModel
+      .find(filter)
+      .select('-password -__v -createdAt -updatedAt')
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    if (!data.length) {
+      return {
+        success: false,
+        code: 404,
+        message: 'No users found',
+        data: [],
+        pagination: { total: 0, page, limit, pages: 0 },
+      };
+    }
+
+    return {
+      success: true,
+      code: 200,
+      message: `${
+        role ? role.charAt(0).toUpperCase() + role.slice(1) : 'All users'
+      } retrieved successfully`,
+      data,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
 }

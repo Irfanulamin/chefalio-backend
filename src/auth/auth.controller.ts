@@ -25,6 +25,18 @@ export class AuthController {
     return await this.authService.userLogin(loginUserDto);
   }
 
+  @Post('/logout')
+  async logout() {
+    // Since JWT is stateless, we can't invalidate the token on the server side.
+    // The client should simply delete the token on their end to "log out".
+    return {
+      success: true,
+      code: 200,
+      message:
+        'User logged out successfully. Please delete the token on the client side.',
+    };
+  }
+
   @UseGuards(AuthGuard)
   @Get('/profile')
   async getProfile(@Request() req) {
