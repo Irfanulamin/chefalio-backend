@@ -1,26 +1,70 @@
-import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { UserService } from 'src/user/user.service';
+import { RegisterUserDto } from './dto/registerUser.dto';
+import bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
+import { LoginUserDto } from './dto/loginUser.dto';
 
 @Injectable()
 export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  constructor(
+    private readonly userService: UserService,
+    private readonly jwtService: JwtService,
+  ) {}
+  async userRegister(registerUserDto: RegisterUserDto) {
+    const hash = await bcrypt.hash(registerUserDto.password, 10);
+    const user = await this.userService.createUser({
+      ...registerUserDto,
+      password: hash,
+    });
+
+    const payload = { sub: user._id, role: user.role };
+    const token = await this.jwtService.signAsync(payload);
+
+    return {
+      success: true,
+      code: 200,
+      message: 'User registered successfully',
+      access_token: token,
+    };
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  async userLogin(loginUserDto: LoginUserDto) {
+    const userNameOrEmail = loginUserDto.email ?? loginUserDto.username;
+
+    if (!userNameOrEmail) {
+      throw new BadRequestException('Email or username is required');
+    }
+
+    const user = await this.userService.findByEmailOrUsername(userNameOrEmail);
+
+    if (!user) {
+      return {
+        success: false,
+        code: 401,
+        message: 'The email address is not registered',
+      };
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      loginUserDto.password,
+      user.password,
+    );
+
+    if (!isPasswordValid) {
+      return {
+        statusCode: 401,
+        message: 'Invalid password or email address',
+      };
+    }
+
+    const payload = { sub: user._id, role: user.role };
+    const token = await this.jwtService.signAsync(payload);
+
+    return { success: true, code: 200, message: "Login successful", access_token: token };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
-
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+  async getProfile(userId: string) {
+    return await this.userService.userDetails(userId);
   }
 }
