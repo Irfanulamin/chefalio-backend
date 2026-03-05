@@ -7,12 +7,13 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { RegisterUserDto } from 'src/auth/dto/registerUser.dto';
 import { User } from './schema/user.schema';
-import { Model, mongo } from 'mongoose';
+import { Model, mongo, Mongoose } from 'mongoose';
 import { UpdateUserDto } from './dto/UpdateUser.dto';
 import { CloudinaryService } from './FileUpload/cloudinary.service';
 import bcrypt from 'bcrypt';
 import { AdminUpdateUserDto } from './dto/AdminUpdateUser.dto';
 import { CreateUserDto } from './dto/CreateUser.dto';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class UserService {
@@ -182,5 +183,9 @@ export class UserService {
       }
       throw err;
     }
+  }
+
+  async getUserById(userId: Types.ObjectId | string) {
+    return this.userModel.findById(userId);
   }
 }
