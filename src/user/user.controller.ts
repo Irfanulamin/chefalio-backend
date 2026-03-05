@@ -1,15 +1,28 @@
 import {
+  Body,
   Controller,
   DefaultValuePipe,
+  Delete,
   Get,
+  HttpStatus,
+  Param,
+  ParseFilePipeBuilder,
   ParseIntPipe,
+  Patch,
   Query,
+  Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Role, Roles } from 'src/auth/roles.decorator';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UpdateUserDto } from './dto/UpdateUser.dto';
+import type { Multer } from 'multer';
+import { AdminUpdateUserDto } from './dto/AdminUpdateUser.dto';
 
 @Controller('users')
 export class UserController {
@@ -27,10 +40,40 @@ export class UserController {
     if (role && !['user', 'chef', 'admin'].includes(role)) {
       return {
         success: false,
-        code: 400,
+        statusCode: 400,
         message: 'Invalid role. Valid roles are user, chef, admin.',
       };
     }
     return this.userService.getAllUsers(page, limit, role, search);
+  }
+
+  @Patch('/update/me')
+  @UseGuards(AuthGuard)
+  @UseInterceptors(FileInterceptor('image'))
+  async updateOwnProfile(
+    @Req() req,
+    @Body() dto: UpdateUserDto,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({ fileType: '.(jpg|jpeg|png)' })
+        .addMaxSizeValidator({
+          maxSize: 5 * 1024 * 1024,
+          message: 'File size should not exceed 5MB',
+        })
+        .build({
+          fileIsRequired: false,
+          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        }),
+    )
+    image?: Express.Multer.File,
+  ) {
+    return this.userService.updateOwnProfile(req.user.sub, dto, image);
+  }
+
+  @Patch('/update/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  adminUpdate(@Param('id') id: string, @Body() dto: AdminUpdateUserDto) {
+    return this.userService.updateUserByAdmin(id, dto);
   }
 }

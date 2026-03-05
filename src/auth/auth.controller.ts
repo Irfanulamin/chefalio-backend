@@ -31,7 +31,7 @@ export class AuthController {
     // The client should simply delete the token on their end to "log out".
     return {
       success: true,
-      code: 200,
+      stausCode: 200,
       message:
         'User logged out successfully. Please delete the token on the client side.',
     };

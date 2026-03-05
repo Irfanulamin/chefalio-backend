@@ -23,7 +23,7 @@ export class AuthService {
 
     return {
       success: true,
-      code: 200,
+      statusCode: 200,
       message: 'User registered successfully',
       access_token: token,
     };
@@ -41,7 +41,7 @@ export class AuthService {
     if (!user) {
       return {
         success: false,
-        code: 401,
+        statusCode: 401,
         message: 'The email address is not registered',
       };
     }
@@ -58,10 +58,23 @@ export class AuthService {
       };
     }
 
+    if (!user.isActive) {
+      return {
+        success: false,
+        statusCode: 403,
+        message: 'Your account is inactive. Please contact support.',
+      };
+    }
+
     const payload = { sub: user._id, role: user.role };
     const token = await this.jwtService.signAsync(payload);
 
-    return { success: true, code: 200, message: "Login successful", access_token: token };
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'Login successful',
+      access_token: token,
+    };
   }
 
   async getProfile(userId: string) {

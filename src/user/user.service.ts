@@ -1,12 +1,24 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { RegisterUserDto } from 'src/auth/dto/registerUser.dto';
 import { User } from './schema/user.schema';
 import { Model, mongo } from 'mongoose';
+import { UpdateUserDto } from './dto/UpdateUser.dto';
+import { CloudinaryService } from './FileUpload/cloudinary.service';
+import bcrypt from 'bcrypt';
+import { AdminUpdateUserDto } from './dto/AdminUpdateUser.dto';
 
 @Injectable()
 export class UserService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<User>,
+    private cloudinaryService: CloudinaryService,
+  ) {}
   async createUser(registerUserDto: RegisterUserDto) {
     try {
       return await this.userModel.create(registerUserDto);
@@ -61,7 +73,7 @@ export class UserService {
     if (!data.length) {
       return {
         success: false,
-        code: 404,
+        statusCode: 404,
         message: 'No users found',
         data: [],
         pagination: { total: 0, page, limit, pages: 0 },
@@ -70,7 +82,7 @@ export class UserService {
 
     return {
       success: true,
-      code: 200,
+      statusCode: 200,
       message: `${
         role ? role.charAt(0).toUpperCase() + role.slice(1) : 'All users'
       } retrieved successfully`,
@@ -81,6 +93,66 @@ export class UserService {
         limit,
         pages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  async updateOwnProfile(
+    userId: string,
+    dto: UpdateUserDto,
+    image?: Express.Multer.File,
+  ) {
+    if (!dto && !image) {
+      throw new BadRequestException('No data provided for update');
+    }
+
+    const user = await this.userModel.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const updateData: any = { ...dto };
+
+    if (dto.password) {
+      updateData.password = await bcrypt.hash(dto.password, 10);
+    }
+
+    // Upload only if image exists
+    if (image) {
+      const uploadedImageUrl = await this.cloudinaryService.uploadImage(image);
+      updateData.profile_url = uploadedImageUrl;
+    }
+
+    const updatedUser = await this.userModel
+      .findByIdAndUpdate(userId, updateData, { new: true })
+      .select('-password -__v -createdAt -updatedAt');
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'Profile updated successfully',
+      data: updatedUser,
+    };
+  }
+
+  async updateUserByAdmin(userId: string, dto: AdminUpdateUserDto) {
+    const user = await this.userModel.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const updateData: any = { ...dto };
+
+    const updatedUser = await this.userModel
+      .findByIdAndUpdate(userId, updateData, { new: true })
+      .select('-password -__v -createdAt -updatedAt');
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'User updated successfully',
+      data: updatedUser,
     };
   }
 }
