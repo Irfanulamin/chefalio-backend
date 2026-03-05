@@ -9,6 +9,7 @@ import {
   ParseFilePipeBuilder,
   ParseIntPipe,
   Patch,
+  Post,
   Query,
   Req,
   UploadedFile,
@@ -23,6 +24,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateUserDto } from './dto/UpdateUser.dto';
 import type { Multer } from 'multer';
 import { AdminUpdateUserDto } from './dto/AdminUpdateUser.dto';
+import { CreateUserDto } from './dto/CreateUser.dto';
 
 @Controller('users')
 export class UserController {
@@ -36,6 +38,7 @@ export class UserController {
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
     @Query('role') role?: 'user' | 'chef' | 'admin',
     @Query('search') search: string = '',
+    @Query('isActive') isActive?: boolean,
   ) {
     if (role && !['user', 'chef', 'admin'].includes(role)) {
       return {
@@ -44,7 +47,7 @@ export class UserController {
         message: 'Invalid role. Valid roles are user, chef, admin.',
       };
     }
-    return this.userService.getAllUsers(page, limit, role, search);
+    return this.userService.getAllUsers(page, limit, role, search, isActive);
   }
 
   @Patch('/update/me')
@@ -75,5 +78,12 @@ export class UserController {
   @Roles(Role.Admin)
   adminUpdate(@Param('id') id: string, @Body() dto: AdminUpdateUserDto) {
     return this.userService.updateUserByAdmin(id, dto);
+  }
+
+  @Post('create')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  createUser(@Body() dto: CreateUserDto) {
+    return this.userService.createUserByAdmin(dto);
   }
 }

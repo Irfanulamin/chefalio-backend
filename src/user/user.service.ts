@@ -12,6 +12,7 @@ import { UpdateUserDto } from './dto/UpdateUser.dto';
 import { CloudinaryService } from './FileUpload/cloudinary.service';
 import bcrypt from 'bcrypt';
 import { AdminUpdateUserDto } from './dto/AdminUpdateUser.dto';
+import { CreateUserDto } from './dto/CreateUser.dto';
 
 @Injectable()
 export class UserService {
@@ -48,11 +49,16 @@ export class UserService {
     limit: number = 10,
     role?: 'user' | 'chef' | 'admin',
     search: string = '',
+    isActive?: boolean,
   ) {
     const filter: any = {};
 
     if (role) {
       filter.role = role;
+    }
+
+    if (isActive !== undefined) {
+      filter.isActive = isActive;
     }
 
     if (search) {
@@ -154,5 +160,27 @@ export class UserService {
       message: 'User updated successfully',
       data: updatedUser,
     };
+  }
+
+  async createUserByAdmin(dto: CreateUserDto) {
+    try {
+      const hash = await bcrypt.hash(dto.password, 10);
+      const createdUser = await this.userModel.create({
+        ...dto,
+        password: hash,
+      });
+      const { password, ...userWithoutPassword } = createdUser.toObject();
+      return {
+        success: true,
+        statusCode: 201,
+        message: 'User created successfully',
+        data: userWithoutPassword,
+      };
+    } catch (err: any) {
+      if (err instanceof mongo.MongoServerError && err.code === 11000) {
+        throw new ConflictException('Username or email already exists');
+      }
+      throw err;
+    }
   }
 }
