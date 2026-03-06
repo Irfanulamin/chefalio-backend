@@ -12,35 +12,35 @@ export class RecipeInteractionController {
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.User)
-  @Post('save/:recipeId')
+  @Post('/save/:recipeId')
   toggleSave(@Param('recipeId') recipeId: string, @Req() req) {
     return this.recipeInteractionService.toggleSave(req.user.sub, recipeId);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.User)
-  @Post('love/:recipeId')
+  @Post('/love/:recipeId')
   toggleLove(@Param('recipeId') recipeId: string, @Req() req) {
     return this.recipeInteractionService.toggleLove(req.user.sub, recipeId);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.User)
-  @Get('saved')
+  @Get('/saved')
   getSavedRecipes(@Req() req) {
     return this.recipeInteractionService.getSavedRecipes(req.user.sub);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.User)
-  @Get('loved')
+  @Get('/loved')
   getLovedRecipes(@Req() req) {
     return this.recipeInteractionService.getLovedRecipes(req.user.sub);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.User)
-  @Get('stats/:recipeId')
+  @Get('/stats/:recipeId')
   getRecipeStats(@Param('recipeId') recipeId: string, @Req() req) {
     return this.recipeInteractionService.getInteractionStatus(
       req.user.sub,
@@ -50,14 +50,14 @@ export class RecipeInteractionController {
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
-  @Get('analytics/chef')
+  @Get('/analytics/chef')
   getChefAnalytics(@Req() req) {
     return this.recipeInteractionService.getChefAnalytics(req.user.sub);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
-  @Get('analytics/admin')
+  @Get('/analytics/admin')
   getAdminAnalytics() {
     return this.recipeInteractionService.getAdminStats();
   }
