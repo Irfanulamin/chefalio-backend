@@ -12,6 +12,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { MailService } from 'src/services/mail.service';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { ChangePasswordDto } from './dto/changePassword.dto';
+import type { Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -39,7 +40,7 @@ export class AuthService {
     };
   }
 
-  async userLogin(loginUserDto: LoginUserDto) {
+  async userLogin(loginUserDto: LoginUserDto, res: Response) {
     const userNameOrEmail = loginUserDto.email ?? loginUserDto.username;
 
     if (!userNameOrEmail) {
@@ -78,6 +79,13 @@ export class AuthService {
 
     const payload = { sub: user._id, role: user.role };
     const token = await this.jwtService.signAsync(payload);
+
+    res.cookie('access_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 3600000,
+    });
 
     return {
       success: true,

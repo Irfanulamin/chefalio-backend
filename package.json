@@ -32,6 +32,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "cloudinary": "^2.9.0",
+    "cookie-parser": "^1.4.7",
     "mongoose": "^9.2.4",
     "multer": "^2.1.1",
     "nanoid": "^5.1.6",
