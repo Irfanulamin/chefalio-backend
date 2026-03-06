@@ -14,12 +14,14 @@ import { AdminUpdateUserDto } from './dto/AdminUpdateUser.dto';
 import { CreateUserDto } from './dto/CreateUser.dto';
 import { Types } from 'mongoose';
 import { CloudinaryService } from 'src/services/cloudinary.service';
+import { RecipeService } from 'src/recipe/recipe.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly recipeService: RecipeService,
   ) {}
   async createUser(registerUserDto: RegisterUserDto) {
     try {
@@ -122,6 +124,10 @@ export class UserService {
 
     if (dto.password) {
       updateData.password = await bcrypt.hash(dto.password, 10);
+    }
+
+    if (dto.fullName) {
+      await this.recipeService.syncAuthorFullName(userId, dto.fullName);
     }
 
     // Upload only if image exists

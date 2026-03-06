@@ -33,4 +33,23 @@ export class CloudinaryService {
       readable.pipe(stream);
     });
   }
+
+  async deleteImage(publicId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader.destroy(
+        publicId,
+        { resource_type: 'image' },
+        (error, result) => {
+          if (error) return reject(error);
+          // optionally, check result.result === 'ok'
+          resolve();
+        },
+      );
+    });
+  }
+
+  async getCloudinaryPublicId(url: string) {
+    const match = url.match(/\/([^/]+)\.(jpg|png|jpeg)$/);
+    return match ? `recipe_images/${match[1]}` : null;
+  }
 }
