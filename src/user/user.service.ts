@@ -122,10 +122,6 @@ export class UserService {
 
     const updateData: any = { ...dto };
 
-    if (dto.password) {
-      updateData.password = await bcrypt.hash(dto.password, 10);
-    }
-
     if (dto.fullName) {
       await this.recipeService.syncAuthorFullName(userId, dto.fullName);
     }

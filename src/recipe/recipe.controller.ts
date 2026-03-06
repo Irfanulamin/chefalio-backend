@@ -77,12 +77,6 @@ export class RecipeController {
     );
   }
 
-  @UseGuards(AuthGuard)
-  @Get(':id')
-  async getRecipeById(@Param('id') id: string) {
-    return this.recipeService.getRecipeById(id);
-  }
-
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
   @Delete(':id')
@@ -92,7 +86,7 @@ export class RecipeController {
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
-  @Patch(':id')
+  @Patch('/update/:id')
   @UseInterceptors(FilesInterceptor('images'))
   async updateRecipe(
     @Param('id') id: string,
@@ -140,5 +134,11 @@ export class RecipeController {
   @Get('dashboard/analytics')
   async getDashboardAnalytics() {
     return this.recipeService.getDashboardAnalytics();
+  }
+
+  @UseGuards(AuthGuard)
+  @Get(':id')
+  async getRecipeById(@Param('id') id: string) {
+    return this.recipeService.getRecipeById(id);
   }
 }
