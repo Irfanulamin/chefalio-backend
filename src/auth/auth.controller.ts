@@ -33,6 +33,12 @@ export class AuthController {
     return await this.authService.userLogin(loginUserDto, res);
   }
 
+  @UseGuards(AuthGuard)
+  @Get('/me')
+  async getMe(@Request() req) {
+    return { userId: req.user.sub, role: req.user.role };
+  }
+
   @Post('/logout')
   async logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('access_token');
@@ -45,10 +51,13 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard)
-  @Get('/profile')
-  async getProfile(@Request() req) {
+  @Post('/change-password')
+  async changePassword(
+    @Request() req,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
     const userId: string = req.user.sub;
-    return await this.authService.getProfile(userId);
+    return await this.authService.changePassword(userId, changePasswordDto);
   }
 
   @Post('/forgot-password')
@@ -62,18 +71,9 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard)
-  @Post('/change-password')
-  async changePassword(
-    @Request() req,
-    @Body() changePasswordDto: ChangePasswordDto,
-  ) {
+  @Get('/profile')
+  async getProfile(@Request() req) {
     const userId: string = req.user.sub;
-    return await this.authService.changePassword(userId, changePasswordDto);
-  }
-
-  @UseGuards(AuthGuard)
-  @Get('/me')
-  async getMe(@Request() req) {
-    return { userId: req.user.sub, role: req.user.role };
+    return await this.authService.getProfile(userId);
   }
 }

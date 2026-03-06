@@ -28,6 +28,12 @@ import { CreateUserDto } from './dto/CreateUser.dto';
 @Controller('users')
 export class UserController {
   constructor(private userService: UserService) {}
+  @Post('/create')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  createUser(@Body() dto: CreateUserDto) {
+    return this.userService.createUserByAdmin(dto);
+  }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
@@ -47,6 +53,13 @@ export class UserController {
       };
     }
     return this.userService.getAllUsers(page, limit, role, search, isActive);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  @Get('/:id')
+  getUser(@Param('id') id: string) {
+    return this.userService.getUserById(id);
   }
 
   @Patch('/update/me')
@@ -77,20 +90,6 @@ export class UserController {
   @Roles(Role.Admin)
   adminUpdate(@Param('id') id: string, @Body() dto: AdminUpdateUserDto) {
     return this.userService.updateUserByAdmin(id, dto);
-  }
-
-  @Post('/create')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.Admin)
-  createUser(@Body() dto: CreateUserDto) {
-    return this.userService.createUserByAdmin(dto);
-  }
-
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.Admin)
-  @Get('/:id')
-  getUser(@Param('id') id: string) {
-    return this.userService.getUserById(id);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
