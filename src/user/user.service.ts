@@ -9,17 +9,17 @@ import { RegisterUserDto } from 'src/auth/dto/registerUser.dto';
 import { User } from './schema/user.schema';
 import { Model, mongo, Mongoose } from 'mongoose';
 import { UpdateUserDto } from './dto/UpdateUser.dto';
-import { CloudinaryService } from './FileUpload/cloudinary.service';
 import bcrypt from 'bcrypt';
 import { AdminUpdateUserDto } from './dto/AdminUpdateUser.dto';
 import { CreateUserDto } from './dto/CreateUser.dto';
 import { Types } from 'mongoose';
+import { CloudinaryService } from 'src/services/cloudinary.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
-    private cloudinaryService: CloudinaryService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
   async createUser(registerUserDto: RegisterUserDto) {
     try {
@@ -187,5 +187,60 @@ export class UserService {
 
   async getUserById(userId: Types.ObjectId | string) {
     return this.userModel.findById(userId);
+  }
+
+  async getUserAnalytics() {
+    const totalUsers = await this.userModel.countDocuments();
+    const totalAdmins = await this.userModel.countDocuments({ role: 'admin' });
+    const totalChefs = await this.userModel.countDocuments({ role: 'chef' });
+    const totalMembers = await this.userModel.countDocuments({ role: 'user' });
+    const activeUsers = await this.userModel.countDocuments({ isActive: true });
+    const activeChefs = await this.userModel.countDocuments({
+      role: 'chef',
+      isActive: true,
+    });
+    const activeMembers = await this.userModel.countDocuments({
+      role: 'user',
+      isActive: true,
+    });
+    const activeAdmins = await this.userModel.countDocuments({
+      role: 'admin',
+      isActive: true,
+    });
+    const recentJoinedByRole = await this.userModel.aggregate([
+      {
+        $group: {
+          _id: {
+            role: '$role',
+            date: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { '_id.date': -1 } },
+      { $limit: 30 },
+    ]);
+
+    const data = {
+      totalUsers,
+      totalAdmins,
+      totalChefs,
+      totalMembers,
+      activeUsers,
+      activeChefs,
+      activeMembers,
+      activeAdmins,
+      recentJoinedByRole: recentJoinedByRole.map((item) => ({
+        date: item._id.date,
+        role: item._id.role,
+        count: item.count,
+      })),
+    };
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'User analytics retrieved successfully',
+      data,
+    };
   }
 }

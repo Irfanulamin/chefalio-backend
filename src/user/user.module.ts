@@ -4,7 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './schema/user.schema';
 import { UserController } from './user.controller';
 import { ConfigModule } from '@nestjs/config';
-import { CloudinaryService } from './FileUpload/cloudinary.service';
+import { CloudinaryService } from 'src/services/cloudinary.service';
 
 @Module({
   imports: [

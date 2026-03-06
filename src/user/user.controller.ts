@@ -22,7 +22,6 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateUserDto } from './dto/UpdateUser.dto';
-import type { Multer } from 'multer';
 import { AdminUpdateUserDto } from './dto/AdminUpdateUser.dto';
 import { CreateUserDto } from './dto/CreateUser.dto';
 
@@ -32,7 +31,7 @@ export class UserController {
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
-  @Get('all')
+  @Get('/all')
   getAllUsers(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
@@ -80,10 +79,24 @@ export class UserController {
     return this.userService.updateUserByAdmin(id, dto);
   }
 
-  @Post('create')
+  @Post('/create')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
   createUser(@Body() dto: CreateUserDto) {
     return this.userService.createUserByAdmin(dto);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  @Get('/:id')
+  getUser(@Param('id') id: string) {
+    return this.userService.getUserById(id);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  @Get('/dashboard/analytics')
+  getUserAnalytics() {
+    return this.userService.getUserAnalytics();
   }
 }
