@@ -70,4 +70,10 @@ export class AuthController {
     const userId: string = req.user.sub;
     return await this.authService.changePassword(userId, changePasswordDto);
   }
+
+  @UseGuards(AuthGuard)
+  @Get('/me')
+  async getMe(@Request() req) {
+    return { userId: req.user.sub, role: req.user.role };
+  }
 }

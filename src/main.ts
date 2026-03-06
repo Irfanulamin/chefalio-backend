@@ -24,7 +24,7 @@ async function bootstrap() {
           credentials: true,
         }
       : {
-          origin: '*',
+          origin: 'http://localhost:3000',
           credentials: true,
         },
   );
