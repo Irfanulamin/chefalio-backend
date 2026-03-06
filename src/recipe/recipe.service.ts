@@ -225,4 +225,73 @@ export class RecipeService {
       { $set: { 'author.fullName': newFullName } },
     );
   }
+
+  async getRecipesByAuthor(userId: string) {
+    const recipes = await this.recipeModel
+      .find({ 'author.userId': new Types.ObjectId(userId) })
+      .sort({ createdAt: -1 });
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'Recipes retrieved successfully',
+      data: recipes,
+    };
+  }
+
+  async getDashboardAnalytics() {
+    const [
+      totalRecipes,
+      recipesPerDifficulty,
+      topTags,
+      top3MostUploadedAuthors,
+    ] = await Promise.all([
+      this.recipeModel.countDocuments(),
+
+      this.recipeModel.aggregate([
+        { $group: { _id: '$difficulty', count: { $sum: 1 } } },
+      ]),
+
+      this.recipeModel.aggregate([
+        { $unwind: '$tags' },
+        { $group: { _id: '$tags', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+      ]),
+
+      this.recipeModel.aggregate([
+        {
+          $group: {
+            _id: '$author.userId',
+            fullName: { $first: '$author.fullName' },
+            username: { $first: '$author.username' },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+        { $limit: 3 },
+      ]),
+    ]);
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'Dashboard analytics retrieved successfully',
+      data: {
+        totalRecipes,
+        recipesPerDifficulty: recipesPerDifficulty.map(({ _id, count }) => ({
+          difficulty: _id,
+          count,
+        })),
+        topTags: topTags.map(({ _id, count }) => ({ tag: _id, count })),
+        top3MostUploadedAuthors: top3MostUploadedAuthors.map(
+          ({ _id, fullName, username, count }) => ({
+            userId: _id,
+            fullName,
+            username,
+            count,
+          }),
+        ),
+      },
+    };
+  }
 }
