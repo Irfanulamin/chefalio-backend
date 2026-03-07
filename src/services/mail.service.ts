@@ -1,30 +1,25 @@
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class MailService {
-  private transporter: nodemailer.Transporter;
+  private resend: Resend;
+
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST!,
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    this.resend = new Resend(process.env.RESEND_API_KEY);
   }
 
   async sendMail(to: string, token: string) {
     const resetLink = `${process.env.RESET_PASSWORD_URL}?token=${token}`;
-    const mailOptions = {
-      from: 'Chefalio Support (Auth Service)',
-      to,
-      subject: 'Password Reset Instructions',
-      html: `
+
+    try {
+      await this.resend.emails.send({
+        from: 'Chefalio Support <no-reply@eventifyseu.online>',
+        to,
+        subject: 'Password Reset Instructions',
+        html: `
 <div style="font-family: Arial, Helvetica, sans-serif; background-color:#f4f6f8; padding:40px 0;">
-  <div style="max-width:600px; margin:auto; background:#ffffff; padding:30px; border-radius:8px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.05);;">
+  <div style="max-width:600px; margin:auto; background:#ffffff; padding:30px; border-radius:8px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
     
     <h2 style="color:#333; margin-bottom:10px;">Reset Your Password</h2>
 
@@ -58,10 +53,9 @@ export class MailService {
 
   </div>
 </div>
-`,
-    };
-    try {
-      await this.transporter.sendMail(mailOptions);
+        `,
+      });
+
       console.log(`Email sent to ${to}`);
     } catch (error) {
       console.error(`Failed to send email to ${to}:`, error);
