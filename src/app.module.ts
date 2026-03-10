@@ -7,6 +7,7 @@ import { UserModule } from './user/user.module';
 import { ConfigModule } from '@nestjs/config';
 import { RecipeModule } from './recipe/recipe.module';
 import { RecipeInteractionModule } from './recipe-interaction/recipe-interaction.module';
+import { CookbookModule } from './cookbook/cookbook.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { RecipeInteractionModule } from './recipe-interaction/recipe-interaction
     MongooseModule.forRoot(process.env.MONGODB_URI!),
     RecipeModule,
     RecipeInteractionModule,
+    CookbookModule,
   ],
   controllers: [AppController],
   providers: [AppService],
