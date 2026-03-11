@@ -56,8 +56,7 @@ export class RecipeController {
     return this.recipeService.createRecipe(req.user.sub, dto, images);
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.Admin, Role.User)
+  @UseGuards(AuthGuard)
   @Get('all')
   async getAllRecipes(
     @Query('page') page: number = 1,
@@ -113,7 +112,7 @@ export class RecipeController {
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
-  @Delete('delete/:id')
+  @Delete('/delete/:id')
   async deleteRecipeByChef(@Param('id') id: string, @Req() req) {
     const recipe = await this.recipeService.getRecipeById(id);
     if (recipe.data.author.userId.toString() !== req.user.sub) {
