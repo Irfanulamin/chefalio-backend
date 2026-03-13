@@ -6,7 +6,6 @@ import { User } from 'src/user/schema/user.schema';
 import { Cookbook } from './schemas/cookbook.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { stat } from 'fs';
 
 @Injectable()
 export class CookbookService {

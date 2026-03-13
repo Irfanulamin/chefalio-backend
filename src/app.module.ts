@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { RecipeModule } from './recipe/recipe.module';
 import { RecipeInteractionModule } from './recipe-interaction/recipe-interaction.module';
 import { CookbookModule } from './cookbook/cookbook.module';
+import { CookbookPurchaseModule } from './cookbook-purchase/cookbook-purchase.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { CookbookModule } from './cookbook/cookbook.module';
     RecipeModule,
     RecipeInteractionModule,
     CookbookModule,
+    CookbookPurchaseModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -7,7 +7,6 @@ import {
   MaxLength,
   ArrayMinSize,
   ArrayMaxSize,
-  IsOptional,
   IsIn,
 } from 'class-validator';
 import { Type, Transform, plainToInstance } from 'class-transformer';

@@ -61,4 +61,67 @@ export class MailService {
       console.error(`Failed to send email to ${to}:`, error);
     }
   }
+
+  async sendPurchaseReceipt(
+    to: string,
+    purchase: {
+      cookbookTitle: string;
+      cookbookImage: string;
+      price: number;
+      purchaseDate: Date;
+    },
+  ) {
+    try {
+      await this.resend.emails.send({
+        from: 'Chefalio Support <no-reply@eventifyseu.online>',
+        to,
+        subject: 'Your Cookbook Purchase Receipt',
+        html: `
+<div style="font-family: Arial, Helvetica, sans-serif; background-color:#f4f6f8; padding:40px 0;">
+  <div style="max-width:600px; margin:auto; background:#ffffff; padding:30px; border-radius:8px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
+    
+    <h2 style="color:#333; margin-bottom:10px;">Thank you for your purchase!</h2>
+    <p style="color:#555; font-size:16px; line-height:1.6;">
+      Your purchase has been completed successfully. Here’s your receipt:
+    </p>
+
+    <table style="width:100%; border-collapse:collapse; margin-top:20px;">
+      <thead>
+        <tr style="background-color:#f0f0f0;">
+          <th style="padding:10px; text-align:left; border:1px solid #ddd;">Cookbook</th>
+          <th style="padding:10px; text-align:left; border:1px solid #ddd;">Price</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:10px; border:1px solid #ddd; text-align:left;">
+            <img src="${purchase.cookbookImage}" alt="${purchase.cookbookTitle}" style="width:50px; height:auto; vertical-align:middle; margin-right:10px;">
+            ${purchase.cookbookTitle}
+          </td>
+          <td style="padding:10px; border:1px solid #ddd; text-align:left;">
+            $${purchase.price.toFixed(2)}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p style="margin-top:25px; font-size:14px; color:#666;">
+      Purchase Date: ${purchase.purchaseDate.toDateString()}
+    </p>
+
+    <hr style="margin:30px 0; border:none; border-top:1px solid #eee;">
+
+    <p style="font-size:13px; color:#888;">
+      If you have any questions about your purchase, reply to this email.
+    </p>
+  </div>
+</div>
+        `,
+      });
+
+      console.log(`Purchase receipt sent to ${to}`);
+    } catch (error) {
+      console.error(`Failed to send purchase receipt to ${to}:`, error);
+    }
+  }
 }
