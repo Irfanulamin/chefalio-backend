@@ -32,7 +32,7 @@ export class RecipeInteractionService {
           },
         },
       ],
-      { upsert: true, returnDocument: 'before' },
+      { upsert: true, returnDocument: 'before', updatePipeline: true },
     );
 
     const wasSaved = previous?.isSaved ?? false;
@@ -71,7 +71,7 @@ export class RecipeInteractionService {
           },
         },
       ],
-      { upsert: true, returnDocument: 'before' },
+      { upsert: true, returnDocument: 'before', updatePipeline: true },
     );
 
     const wasLoved = previous?.isLoved ?? false;

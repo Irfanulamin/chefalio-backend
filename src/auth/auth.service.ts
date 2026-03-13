@@ -38,7 +38,7 @@ export class AuthService {
     });
 
     const payload = { sub: user._id, role: user.role };
-    const token = await this.jwtService.signAsync(payload, { expiresIn: '1h' });
+    const token = await this.jwtService.signAsync(payload);
 
     res.cookie('access_token', token, {
       httpOnly: true,
@@ -76,7 +76,7 @@ export class AuthService {
     }
 
     const payload = { sub: user._id, role: user.role };
-    const token = await this.jwtService.signAsync(payload, { expiresIn: '1h' });
+    const token = await this.jwtService.signAsync(payload);
 
     res.cookie('access_token', token, {
       httpOnly: true,
