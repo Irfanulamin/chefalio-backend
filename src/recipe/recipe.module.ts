@@ -5,9 +5,11 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from 'src/user/schema/user.schema';
 import { CloudinaryService } from 'src/services/cloudinary.service';
 import { Recipe, RecipeSchema } from './schemas/recipe.schema';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
+    AuthModule,
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: Recipe.name, schema: RecipeSchema },
