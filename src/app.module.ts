@@ -10,9 +10,15 @@ import { RecipeInteractionModule } from './recipe-interaction/recipe-interaction
 import { CookbookModule } from './cookbook/cookbook.module';
 import { CookbookPurchaseModule } from './cookbook-purchase/cookbook-purchase.module';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 
 @Module({
   imports: [
+    JwtModule.register({
+      global: true,
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '1h' },
+    }),
     AuthModule,
     UserModule,
     ConfigModule.forRoot({ isGlobal: true }),
@@ -30,6 +36,6 @@ import { ThrottlerModule } from '@nestjs/throttler';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 5 }]),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ConfigService,JwtService],
 })
 export class AppModule {}
