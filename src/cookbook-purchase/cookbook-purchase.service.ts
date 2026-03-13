@@ -78,7 +78,7 @@ export class CookbookPurchaseService {
       },
     });
 
-    const purchase = await this.purchaseModel.create({
+    await this.purchaseModel.create({
       cookbookId: new Types.ObjectId(dto.cookbookId),
       buyerId: new Types.ObjectId(userId),
       chefId: new Types.ObjectId(cookbook.author.userId),
@@ -145,6 +145,138 @@ export class CookbookPurchaseService {
       success: true,
       message: 'Payment status updated successfully',
       data: purchase,
+    };
+  }
+
+  async getChefEarningsAnalytics(chefId: string) {
+    const CHEF_PROFIT_RATE = 0.8;
+
+    const [totals, salesByDate] = await Promise.all([
+      this.purchaseModel.aggregate([
+        {
+          $match: {
+            chefId: new Types.ObjectId(chefId),
+            paymentStatus: 'paid',
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalEarned: { $sum: '$price' },
+            totalOrders: { $sum: 1 },
+          },
+        },
+      ]),
+
+      this.purchaseModel.aggregate([
+        {
+          $match: {
+            chefId: new Types.ObjectId(chefId),
+            paymentStatus: 'paid',
+          },
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            amount: { $sum: '$price' },
+            orders: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+        { $project: { _id: 0, date: '$_id', amount: 1, orders: 1 } },
+      ]),
+    ]);
+
+    const totalEarned = totals[0]?.totalEarned ?? 0;
+    const totalOrders = totals[0]?.totalOrders ?? 0;
+    const totalProfit = parseFloat((totalEarned * CHEF_PROFIT_RATE).toFixed(2));
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'Chef earnings analytics retrieved successfully',
+      data: {
+        totalEarned: parseFloat(totalEarned.toFixed(2)),
+        totalProfit,
+        profitRate: `${CHEF_PROFIT_RATE * 100}%`,
+        totalOrders,
+        salesGraph: salesByDate,
+      },
+    };
+  }
+
+  async getAdminEarningsAnalytics() {
+    const ADMIN_PROFIT_RATE = 0.2;
+
+    const [totals, salesByDate, top3MostSoldCookbooks] = await Promise.all([
+      this.purchaseModel.aggregate([
+        { $match: { paymentStatus: 'paid' } },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: '$price' },
+            totalOrders: { $sum: 1 },
+          },
+        },
+      ]),
+
+      this.purchaseModel.aggregate([
+        { $match: { paymentStatus: 'paid' } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            amount: { $sum: '$price' },
+            orders: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+        { $project: { _id: 0, date: '$_id', amount: 1, orders: 1 } },
+      ]),
+
+      this.purchaseModel.aggregate([
+        { $match: { paymentStatus: 'paid' } },
+        {
+          $group: {
+            _id: '$cookbookId',
+            cookbookTitle: { $first: '$cookbookTitle' },
+            cookbookImage: { $first: '$cookbookImage' },
+            totalSold: { $sum: 1 },
+            totalRevenue: { $sum: '$price' },
+          },
+        },
+        { $sort: { totalSold: -1 } },
+        { $limit: 3 },
+        {
+          $project: {
+            _id: 0,
+            cookbookId: '$_id',
+            cookbookTitle: 1,
+            cookbookImage: 1,
+            totalSold: 1,
+            totalRevenue: 1,
+          },
+        },
+      ]),
+    ]);
+
+    const totalRevenue = totals[0]?.totalRevenue ?? 0;
+    const totalOrders = totals[0]?.totalOrders ?? 0;
+    const totalProfit = parseFloat(
+      (totalRevenue * ADMIN_PROFIT_RATE).toFixed(2),
+    );
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'Admin earnings analytics retrieved successfully',
+      data: {
+        totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+        totalProfit,
+        profitRate: `${ADMIN_PROFIT_RATE * 100}%`,
+        totalOrders,
+        salesGraph: salesByDate,
+        top3MostSoldCookbooks,
+      },
     };
   }
 

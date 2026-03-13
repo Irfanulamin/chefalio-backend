@@ -86,6 +86,20 @@ export class CookbookPurchaseController {
     return this.cookbookPurchaseService.getChefOrders(chefId);
   }
 
+  @Get('analytics/chef')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Chef)
+  async getChefEarningsAnalytics(@Req() req: any) {
+    return this.cookbookPurchaseService.getChefEarningsAnalytics(req.user.sub);
+  }
+
+  @Get('analytics/admin')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  async getAdminEarningsAnalytics() {
+    return this.cookbookPurchaseService.getAdminEarningsAnalytics();
+  }
+
   @Patch('update-payment-status/:purchaseId')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
