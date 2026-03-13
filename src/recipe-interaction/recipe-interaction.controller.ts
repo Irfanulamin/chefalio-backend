@@ -39,16 +39,6 @@ export class RecipeInteractionController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.User)
-  @Get('/stats/:recipeId')
-  getRecipeStats(@Param('recipeId') recipeId: string, @Req() req) {
-    return this.recipeInteractionService.getInteractionStatus(
-      req.user.sub,
-      recipeId,
-    );
-  }
-
-  @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
   @Get('/analytics/chef')
   getChefAnalytics(@Req() req) {
@@ -60,5 +50,15 @@ export class RecipeInteractionController {
   @Get('/analytics/admin')
   getAdminAnalytics() {
     return this.recipeInteractionService.getAdminStats();
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.User)
+  @Get('/stats/:recipeId')
+  getRecipeStats(@Param('recipeId') recipeId: string, @Req() req) {
+    return this.recipeInteractionService.getInteractionStatus(
+      req.user.sub,
+      recipeId,
+    );
   }
 }

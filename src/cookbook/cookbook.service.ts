@@ -73,7 +73,7 @@ export class CookbookService {
     };
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const cookbook = await this.cookbookModel.findById(id);
     if (!cookbook) {
       return {
@@ -90,7 +90,7 @@ export class CookbookService {
   }
 
   async update(
-    id: number,
+    id: string,
     userId: string,
     updateCookbookDto: UpdateCookbookDto,
     image?: Express.Multer.File,
@@ -127,7 +127,7 @@ export class CookbookService {
     };
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     const cookbook = await this.cookbookModel.findById(id);
     if (!cookbook) {
       return {

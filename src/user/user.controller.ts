@@ -57,9 +57,9 @@ export class UserController {
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
-  @Get('/:id')
-  getUser(@Param('id') id: string) {
-    return this.userService.getUserById(id);
+  @Get('/dashboard/analytics')
+  getUserAnalytics() {
+    return this.userService.getUserAnalytics();
   }
 
   @Patch('/update/me')
@@ -94,8 +94,8 @@ export class UserController {
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
-  @Get('/dashboard/analytics')
-  getUserAnalytics() {
-    return this.userService.getUserAnalytics();
+  @Get('/:id')
+  getUser(@Param('id') id: string) {
+    return this.userService.getUserById(id);
   }
 }

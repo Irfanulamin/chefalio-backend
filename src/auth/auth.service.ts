@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
 import { RegisterUserDto } from './dto/registerUser.dto';
 import bcrypt from 'bcrypt';
@@ -49,32 +54,16 @@ export class AuthService {
 
     const user = await this.userService.findByEmailOrUsername(userNameOrEmail);
 
-    if (!user) {
-      return {
-        success: false,
-        statusCode: 401,
-        message: 'The email address is not registered',
-      };
+    if (
+      !user ||
+      !(await bcrypt.compare(loginUserDto.password, user.password))
+    ) {
+      throw new UnauthorizedException('Invalid credentials');
     }
-
-    const isPasswordValid = await bcrypt.compare(
-      loginUserDto.password,
-      user.password,
-    );
-
-    if (!isPasswordValid) {
-      return {
-        statusCode: 401,
-        message: 'Invalid password or email address',
-      };
-    }
-
     if (!user.isActive) {
-      return {
-        success: false,
-        statusCode: 403,
-        message: 'Your account is inactive. Please contact support.',
-      };
+      throw new ForbiddenException(
+        'Your account is inactive. Please contact support.',
+      );
     }
 
     const payload = { sub: user._id, role: user.role };

@@ -80,6 +80,7 @@ export class CookbookPurchaseService {
     const purchase = await this.purchaseModel.create({
       cookbookId: new Types.ObjectId(dto.cookbookId),
       buyerId: new Types.ObjectId(userId),
+      chefId: new Types.ObjectId(cookbook.author.userId),
       cookbookTitle: cookbook.title,
       cookbookImage: cookbook.cookbook_image,
       price: cookbook.price,
@@ -117,16 +118,10 @@ export class CookbookPurchaseService {
   }
 
   async getChefOrders(chefId: string) {
-    const query = { 'cookbook.author.userId': new Types.ObjectId(chefId) };
     const data = await this.purchaseModel
-      .find(query)
-      .populate('cookbookId', 'title author')
+      .find({ chefId: new Types.ObjectId(chefId) })
       .sort({ createdAt: -1 });
-    return {
-      success: true,
-      message: 'Orders retrieved successfully',
-      data: data,
-    };
+    return { success: true, message: 'Orders retrieved', data };
   }
 
   async updatePaymentStatus(

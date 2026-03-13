@@ -55,7 +55,7 @@ export class CookbookPurchaseController {
     @Param('purchaseId') purchaseId: string,
   ) {
     const chefId = req.user.sub;
-    return this.cookbookPurchaseService.updatePaymentStatus(
+    return await this.cookbookPurchaseService.updatePaymentStatus(
       chefId,
       purchaseId,
       dto.paymentStatus,

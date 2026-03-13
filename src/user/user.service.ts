@@ -28,7 +28,9 @@ export class UserService {
       return await this.userModel.create(registerUserDto);
     } catch (err: any) {
       if (err instanceof mongo.MongoServerError && err.code === 11000) {
-        throw new ConflictException('Username or email already exists');
+        throw new ConflictException(
+          'Registration failed. Please try different credentials.',
+        );
       }
       throw err;
     }
@@ -181,7 +183,9 @@ export class UserService {
       };
     } catch (err: any) {
       if (err instanceof mongo.MongoServerError && err.code === 11000) {
-        throw new ConflictException('Username or email already exists');
+        throw new ConflictException(
+          'Registration failed. Please try different credentials.',
+        );
       }
       throw err;
     }

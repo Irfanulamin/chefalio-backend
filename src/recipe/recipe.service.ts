@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +11,7 @@ import { Model, Types } from 'mongoose';
 import { CloudinaryService } from 'src/services/cloudinary.service';
 import { Recipe } from './schemas/recipe.schema';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
+import { Role } from 'src/auth/roles.decorator';
 
 @Injectable()
 export class RecipeService {
@@ -124,18 +126,17 @@ export class RecipeService {
     };
   }
 
-  async deleteRecipe(id: string) {
+  async deleteRecipe(id: string, userId: string, role: string) {
     const recipe = await this.recipeModel.findById(id);
-    if (!recipe) {
-      throw new NotFoundException('Recipe not found');
-    }
-    await this.recipeModel.findByIdAndDelete(id);
 
-    return {
-      success: true,
-      statusCode: 200,
-      message: 'Recipe deleted successfully',
-    };
+    if (!recipe) throw new NotFoundException('Recipe not found');
+
+    if (role !== 'admin' && recipe.author.userId.toString() !== userId) {
+      throw new ForbiddenException('You do not own this recipe');
+    }
+
+    await this.recipeModel.findByIdAndDelete(id);
+    return { success: true, message: 'Recipe deleted successfully' };
   }
 
   async updateRecipe(

@@ -9,10 +9,10 @@ import {
   UseGuards,
   UseInterceptors,
   Req,
-  UploadedFiles,
   ParseFilePipeBuilder,
   HttpStatus,
   Query,
+  UploadedFile,
 } from '@nestjs/common';
 import { CookbookService } from './cookbook.service';
 import { CreateCookbookDto } from './dto/create-cookbook.dto';
@@ -29,11 +29,11 @@ export class CookbookController {
   @Post('create')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
-  @UseInterceptors(FilesInterceptor('image', 1))
+  @UseInterceptors(FilesInterceptor('image'))
   create(
     @Req() req,
     @Body() dto: CreateCookbookDto,
-    @UploadedFiles(
+    @UploadedFile(
       new ParseFilePipeBuilder()
         .addFileTypeValidator({
           fileType: '.(jpg|jpeg|png)',
@@ -65,7 +65,7 @@ export class CookbookController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.cookbookService.findOne(+id);
+    return this.cookbookService.findOne(id);
   }
 
   @Patch(':id')
@@ -75,7 +75,7 @@ export class CookbookController {
     @Param('id') id: string,
     @Req() req,
     @Body() updateCookbookDto: UpdateCookbookDto,
-    @UploadedFiles(
+    @UploadedFile(
       new ParseFilePipeBuilder()
         .addFileTypeValidator({
           fileType: '.(jpg|jpeg|png)',
@@ -92,7 +92,7 @@ export class CookbookController {
     image: Express.Multer.File,
   ) {
     return this.cookbookService.update(
-      +id,
+      id,
       req.user.sub,
       updateCookbookDto,
       image,
@@ -103,6 +103,6 @@ export class CookbookController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
   remove(@Param('id') id: string) {
-    return this.cookbookService.remove(+id);
+    return this.cookbookService.remove(id);
   }
 }

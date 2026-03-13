@@ -77,10 +77,34 @@ export class RecipeController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Chef)
+  @Get('my-recipes')
+  async getMyRecipes(@Req() req) {
+    return this.recipeService.getRecipesByAuthor(req.user.sub);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
+  @Get('dashboard/analytics')
+  async getDashboardAnalytics() {
+    return this.recipeService.getDashboardAnalytics();
+  }
+
+  @UseGuards(AuthGuard)
+  @Get(':id')
+  async getRecipeById(@Param('id') id: string) {
+    return this.recipeService.getRecipeById(id);
+  }
+
   @Delete(':id')
-  async deleteRecipe(@Param('id') id: string) {
-    return this.recipeService.deleteRecipe(id);
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Chef, Role.Admin)
+  async deleteRecipe(
+    @Param('id') id: string,
+    @Req()
+    req,
+  ) {
+    return this.recipeService.deleteRecipe(id, req.user.sub, req.user.role);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
@@ -108,36 +132,5 @@ export class RecipeController {
     images: Express.Multer.File[],
   ) {
     return this.recipeService.updateRecipe(id, dto, req.user.sub, images || []);
-  }
-
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.Chef)
-  @Delete('/delete/:id')
-  async deleteRecipeByChef(@Param('id') id: string, @Req() req) {
-    const recipe = await this.recipeService.getRecipeById(id);
-    if (recipe.data.author.userId.toString() !== req.user.sub) {
-      throw new BadRequestException('You are not the author of this recipe');
-    }
-    return this.recipeService.deleteRecipe(id);
-  }
-
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.Chef)
-  @Get('my-recipes')
-  async getMyRecipes(@Req() req) {
-    return this.recipeService.getRecipesByAuthor(req.user.sub);
-  }
-
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.Admin)
-  @Get('dashboard/analytics')
-  async getDashboardAnalytics() {
-    return this.recipeService.getDashboardAnalytics();
-  }
-
-  @UseGuards(AuthGuard)
-  @Get(':id')
-  async getRecipeById(@Param('id') id: string) {
-    return this.recipeService.getRecipeById(id);
   }
 }

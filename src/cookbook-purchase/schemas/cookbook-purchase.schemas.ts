@@ -24,6 +24,9 @@ export class CookbookPurchase {
   @Prop({ required: true })
   cookbookTitle: string;
 
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
+  chefId: Types.ObjectId;
+
   @Prop({ required: true })
   cookbookImage: string;
 
