@@ -20,7 +20,6 @@ import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import { ParseObjectIdPipe } from 'src/common/pipes/parse-object-id.pipe';
 
-@UseGuards(AuthGuard)
 @Controller('cookbook-purchase')
 export class CookbookPurchaseController {
   private stripe: Stripe;
@@ -31,6 +30,7 @@ export class CookbookPurchaseController {
     this.stripe = new Stripe(this.config.getOrThrow('STRIPE_SECRET_KEY'));
   }
 
+  @UseGuards(AuthGuard)
   @Post('payment')
   async purchaseCookbook(
     @Req() req: any,
@@ -58,6 +58,7 @@ export class CookbookPurchaseController {
     return { received: true };
   }
 
+  @UseGuards(AuthGuard)
   @Get('my-purchases')
   async getMyPurchases(@Req() req: any) {
     const userId = req.user.sub;
@@ -65,7 +66,7 @@ export class CookbookPurchaseController {
   }
 
   @Get('orders')
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, AuthGuard)
   @Roles(Role.Chef)
   async getChefOrders(@Req() req: any) {
     const chefId = req.user.sub;
@@ -73,7 +74,7 @@ export class CookbookPurchaseController {
   }
 
   @Patch('update-payment-status/:purchaseId')
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, AuthGuard)
   @Roles(Role.Chef)
   async updatePaymentStatus(
     @Req() req: any,

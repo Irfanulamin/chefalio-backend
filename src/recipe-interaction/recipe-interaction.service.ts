@@ -15,37 +15,33 @@ export class RecipeInteractionService {
     const uid = new Types.ObjectId(userId);
     const rid = new Types.ObjectId(recipeId);
 
-    const existing = await this.interactionModel.findOne({
-      userId: uid,
-      recipeId: rid,
-    });
+    const now = new Date();
+    const previous = await this.interactionModel.findOneAndUpdate(
+      { userId: uid, recipeId: rid },
+      [
+        {
+          $set: {
+            userId: { $ifNull: ['$userId', uid] },
+            recipeId: { $ifNull: ['$recipeId', rid] },
+            isSaved: { $not: [{ $ifNull: ['$isSaved', false] }] },
+          },
+        },
+        {
+          $set: {
+            savedAt: { $cond: ['$isSaved', now, null] },
+          },
+        },
+      ],
+      { upsert: true, returnDocument: 'before' },
+    );
 
-    if (!existing) {
-      await this.interactionModel.create({
-        userId: uid,
-        recipeId: rid,
-        isSaved: true,
-        savedAt: new Date(),
-      });
-      await this.recipeModel.findByIdAndUpdate(rid, {
-        $inc: { savedCount: 1 },
-      });
-      return {
-        success: true,
-        statusCode: 200,
-        message: 'Recipe saved successfully',
-        isSaved: true,
-      };
-    }
+    const wasSaved = previous?.isSaved ?? false;
+    const newState = !wasSaved;
 
-    const newState = !existing.isSaved;
-    await existing.updateOne({
-      isSaved: newState,
-      savedAt: newState ? new Date() : null,
-    });
     await this.recipeModel.findByIdAndUpdate(rid, {
-      $inc: { savedCount: newState ? 1 : -1 },
+      $inc: { savedCount: wasSaved ? -1 : 1 },
     });
+
     return {
       success: true,
       statusCode: 200,
@@ -58,37 +54,33 @@ export class RecipeInteractionService {
     const uid = new Types.ObjectId(userId);
     const rid = new Types.ObjectId(recipeId);
 
-    const existing = await this.interactionModel.findOne({
-      userId: uid,
-      recipeId: rid,
-    });
+    const now = new Date();
+    const previous = await this.interactionModel.findOneAndUpdate(
+      { userId: uid, recipeId: rid },
+      [
+        {
+          $set: {
+            userId: { $ifNull: ['$userId', uid] },
+            recipeId: { $ifNull: ['$recipeId', rid] },
+            isLoved: { $not: [{ $ifNull: ['$isLoved', false] }] },
+          },
+        },
+        {
+          $set: {
+            lovedAt: { $cond: ['$isLoved', now, null] },
+          },
+        },
+      ],
+      { upsert: true, returnDocument: 'before' },
+    );
 
-    if (!existing) {
-      await this.interactionModel.create({
-        userId: uid,
-        recipeId: rid,
-        isLoved: true,
-        lovedAt: new Date(),
-      });
-      await this.recipeModel.findByIdAndUpdate(rid, {
-        $inc: { lovedCount: 1 },
-      });
-      return {
-        success: true,
-        statusCode: 200,
-        message: 'Recipe loved successfully',
-        isLoved: true,
-      };
-    }
+    const wasLoved = previous?.isLoved ?? false;
+    const newState = !wasLoved;
 
-    const newState = !existing.isLoved;
-    await existing.updateOne({
-      isLoved: newState,
-      lovedAt: newState ? new Date() : null,
-    });
     await this.recipeModel.findByIdAndUpdate(rid, {
-      $inc: { lovedCount: newState ? 1 : -1 },
+      $inc: { lovedCount: wasLoved ? -1 : 1 },
     });
+
     return {
       success: true,
       statusCode: 200,
