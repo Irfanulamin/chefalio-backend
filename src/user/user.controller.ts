@@ -43,8 +43,9 @@ export class UserController {
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
     @Query('role') role?: 'user' | 'chef' | 'admin',
     @Query('search') search: string = '',
-    @Query('isActive') isActive?: boolean,
+    @Query('isActive') isActiveStr?: string,
   ) {
+    const isActive = isActiveStr === 'true';
     if (role && !['user', 'chef', 'admin'].includes(role)) {
       return {
         success: false,

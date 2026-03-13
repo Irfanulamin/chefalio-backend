@@ -20,7 +20,7 @@ import { UpdateCookbookDto } from './dto/update-cookbook.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Role, Roles } from 'src/auth/roles.decorator';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('cookbooks')
 export class CookbookController {
@@ -29,7 +29,7 @@ export class CookbookController {
   @Post('create')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
-  @UseInterceptors(FilesInterceptor('image'))
+  @UseInterceptors(FileInterceptor('image'))
   create(
     @Req() req,
     @Body() dto: CreateCookbookDto,

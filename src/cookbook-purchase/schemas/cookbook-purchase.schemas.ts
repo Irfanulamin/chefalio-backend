@@ -70,4 +70,4 @@ export class CookbookPurchase {
 export const CookbookPurchaseSchema =
   SchemaFactory.createForClass(CookbookPurchase);
 
-CookbookPurchaseSchema.index({ stripePaymentIntentId: 1 }, { unique: true });
+CookbookPurchaseSchema.index({ stripeSessionId: 1 }, { unique: true });

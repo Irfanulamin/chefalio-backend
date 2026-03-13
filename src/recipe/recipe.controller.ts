@@ -12,8 +12,9 @@ import {
   UploadedFiles,
   ParseFilePipeBuilder,
   HttpStatus,
-  BadRequestException,
   Query,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { RecipeService } from './recipe.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
@@ -59,8 +60,8 @@ export class RecipeController {
   @UseGuards(AuthGuard)
   @Get('all')
   async getAllRecipes(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
     @Query('search') search: string,
     @Query('tags') tags: string,
     @Query('difficulty') difficulty: string,
