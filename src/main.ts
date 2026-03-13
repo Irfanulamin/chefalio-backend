@@ -20,7 +20,7 @@ async function bootstrap() {
   app.enableCors(
     process.env.NODE_ENV === 'production'
       ? {
-          origin: ['https://www.example.com'],
+          origin: process.env.ALLOWED_ORIGIN,
           credentials: true,
         }
       : {
