@@ -1,11 +1,4 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import {
-  ArrayMaxSize,
-  ArrayMinSize,
-  IsArray,
-  IsString,
-  MaxLength,
-} from 'class-validator';
 import { Document, Types } from 'mongoose';
 
 export type RecipeDocument = Recipe & Document;
@@ -34,18 +27,10 @@ export class Recipe {
     email: string;
   };
 
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(50)
-  @IsString({ each: true })
-  @MaxLength(200, { each: true })
+  @Prop({ type: [String], required: true, index: true })
   ingredients: string[];
 
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(5)
-  @IsString({ each: true })
-  @MaxLength(50, { each: true })
+  @Prop({ type: [String], index: true })
   tags: string[];
 
   @Prop({

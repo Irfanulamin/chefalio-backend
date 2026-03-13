@@ -29,7 +29,15 @@ export class CreateRecipeDto {
   @ArrayMinSize(1)
   @ArrayMaxSize(50)
   @IsString({ each: true })
+  @MaxLength(200, { each: true })
   ingredients: string[];
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(5)
+  @IsString({ each: true })
+  @MaxLength(50, { each: true })
+  tags: string[];
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -49,13 +57,6 @@ export class CreateRecipeDto {
     return arr.map((i) => plainToInstance(InstructionDto, i));
   })
   instructions: InstructionDto[];
-
-  @IsNotEmpty({ message: 'Tags are required' })
-  @IsArray({ message: 'Tags must be an array' })
-  @ArrayMinSize(1, { message: 'At least 1 tags are required' })
-  @ArrayMaxSize(5, { message: 'No more than 5 tags are allowed' })
-  @IsString({ each: true })
-  tags: string[];
 
   @IsNotEmpty()
   @IsString()

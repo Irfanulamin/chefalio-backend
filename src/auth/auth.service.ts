@@ -154,7 +154,7 @@ export class AuthService {
   }
 
   async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
-    const user = await this.userService.getUserById(userId);
+    const user = await this.userModel.findById(userId).select('+password');
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -167,8 +167,9 @@ export class AuthService {
     if (!isCurrentPasswordValid) {
       throw new BadRequestException('Current password is incorrect');
     }
-    user.password = await bcrypt.hash(changePasswordDto.newPassword, 10);
-    await user.save();
+    await this.userModel.findByIdAndUpdate(userId, {
+      password: await bcrypt.hash(changePasswordDto.newPassword, 10),
+    });
     return {
       success: true,
       statusCode: 200,
