@@ -105,4 +105,62 @@ export class CookbookPurchaseService {
       data: session.url,
     };
   }
+
+  async getUserPurchases(userId: string) {
+    const query = { buyerId: new Types.ObjectId(userId) };
+    const data = await this.purchaseModel.find(query).sort({ createdAt: -1 });
+    return {
+      success: true,
+      message: 'Purchases retrieved successfully',
+      data: data,
+    };
+  }
+
+  async getChefOrders(chefId: string) {
+    const query = { 'cookbook.author.userId': new Types.ObjectId(chefId) };
+    const data = await this.purchaseModel
+      .find(query)
+      .populate('cookbookId', 'title author')
+      .sort({ createdAt: -1 });
+    return {
+      success: true,
+      message: 'Orders retrieved successfully',
+      data: data,
+    };
+  }
+
+  async updatePaymentStatus(
+    chefId: string,
+    purchaseId: string,
+    paymentStatus: string,
+  ) {
+    const purchase = await this.purchaseModel.findById(purchaseId);
+
+    if (!purchase) {
+      throw new NotFoundException('Purchase not found');
+    }
+
+    const cookbook = await this.cookbookModel.findById(purchase.cookbookId);
+
+    if (!cookbook) {
+      throw new NotFoundException('Cookbook not found');
+    }
+
+    if (cookbook.author.userId.toString() !== chefId) {
+      return {
+        success: false,
+        message: 'You are not authorized to update this purchase',
+        statusCode: 403,
+      };
+    }
+
+    purchase.paymentStatus = paymentStatus;
+    await purchase.save();
+
+    return {
+      success: true,
+      message: 'Payment status updated successfully',
+      data: purchase,
+    };
+  }
 }

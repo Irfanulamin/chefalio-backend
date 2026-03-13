@@ -1,4 +1,16 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateCookbookPurchaseDto } from './create-cookbook-purchase.dto';
+import { IsIn, IsString } from 'class-validator';
 
-export class UpdateCookbookPurchaseDto extends PartialType(CreateCookbookPurchaseDto) {}
+export class UpdateCookbookPurchaseDto {
+  @IsIn(['pending', 'paid', 'failed', 'refunded', 'shipped', 'delivered'], {
+    message:
+      'Payment Status must be one of: pending, paid, failed, refunded, shipped, delivered',
+  })
+  @IsString()
+  paymentStatus:
+    | 'pending'
+    | 'paid'
+    | 'failed'
+    | 'refunded'
+    | 'shipped'
+    | 'delivered';
+}
