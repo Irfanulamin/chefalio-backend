@@ -125,7 +125,7 @@ export class CookbookService {
     }
 
     if (
-      cookbook.author.userId.toString() !== userId ||
+      cookbook.author.userId.toString() !== userId &&
       userRole !== Role.Admin
     ) {
       throw new ForbiddenException(
