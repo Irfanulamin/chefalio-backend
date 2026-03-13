@@ -19,6 +19,7 @@ import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { ChangePasswordDto } from './dto/changePassword.dto';
 import type { Response } from 'express';
 import crypto from 'crypto';
+import { User } from 'src/user/schema/user.schema';
 
 @Injectable()
 export class AuthService {
@@ -27,8 +28,9 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
     @InjectModel(ResetToken.name) private resetTokenModel: Model<ResetToken>,
+    @InjectModel(User.name) private userModel: Model<User>,
   ) {}
-  async userRegister(registerUserDto: RegisterUserDto) {
+  async userRegister(registerUserDto: RegisterUserDto, res: Response) {
     const hash = await bcrypt.hash(registerUserDto.password, 10);
     const user = await this.userService.createUser({
       ...registerUserDto,
@@ -38,11 +40,17 @@ export class AuthService {
     const payload = { sub: user._id, role: user.role };
     const token = await this.jwtService.signAsync(payload, { expiresIn: '1h' });
 
+    res.cookie('access_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 3600000, // 1 hour
+    });
+
     return {
       success: true,
       statusCode: 200,
       message: 'User registered successfully',
-      access_token: token,
     };
   }
 
@@ -81,7 +89,6 @@ export class AuthService {
       success: true,
       statusCode: 200,
       message: 'Login successful',
-      access_token: token,
     };
   }
 
@@ -89,35 +96,28 @@ export class AuthService {
     return await this.userService.userDetails(userId);
   }
 
-  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
-    const user = await this.userService.findByEmailOrUsername(
-      forgotPasswordDto.email,
-    );
-    if (!user) {
-      throw new BadRequestException(
-        'If the email address is registered, you will receive password reset instructions shortly.',
-      );
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.userService.findByEmailOrUsername(dto.email);
+
+    if (user) {
+      const rawToken = nanoid(64);
+      const hashedToken = crypto
+        .createHash('sha256')
+        .update(rawToken)
+        .digest('hex');
+      await this.resetTokenModel.create({
+        token: hashedToken,
+        user: user._id,
+        expiresAt: new Date(Date.now() + 1800000),
+      });
+      await this.mailService.sendMail(user.email, rawToken);
     }
-
-    const rawToken = nanoid(64);
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(rawToken)
-      .digest('hex');
-
-    await this.resetTokenModel.create({
-      token: hashedToken,
-      user: user._id,
-      expiresAt: new Date(Date.now() + 1800000), // 30 minutes
-    });
-
-    await this.mailService.sendMail(user.email, rawToken);
 
     return {
       success: true,
       statusCode: 200,
       message:
-        'Password reset instructions have been sent to your email. Please check your inbox or spam folder.',
+        'If that email is registered, password reset instructions have been sent.',
     };
   }
 
@@ -141,8 +141,9 @@ export class AuthService {
       throw new BadRequestException('User not found');
     }
 
-    user.password = await bcrypt.hash(resetPasswordDto.newPassword, 10);
-    await user.save();
+    await this.userModel.findByIdAndUpdate(user._id, {
+      password: await bcrypt.hash(resetPasswordDto.newPassword, 10),
+    });
     await this.resetTokenModel.deleteOne({ _id: token._id });
 
     return {

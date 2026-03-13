@@ -7,6 +7,7 @@ import {
   UseGuards,
   Patch,
   Param,
+  BadRequestException,
 } from '@nestjs/common';
 import { CookbookPurchaseService } from './cookbook-purchase.service';
 import { CreateCookbookPurchaseDto } from './dto/create-cookbook-purchase.dto';
@@ -44,16 +45,28 @@ export class CookbookPurchaseController {
   @Post('webhook')
   async handleStripeWebhook(@Req() req: RawBodyRequest<Request>) {
     const sig = req.headers['stripe-signature'] as string;
-    if (!req.rawBody) {
-      throw new Error('Missing raw body');
+    if (!req.rawBody) return { received: false };
+
+    let event: Stripe.Event;
+    try {
+      event = this.stripe.webhooks.constructEvent(
+        req.rawBody,
+        sig,
+        this.config.getOrThrow('STRIPE_WEBHOOK_SECRET'),
+      );
+    } catch (err) {
+      throw new BadRequestException(
+        `Webhook signature verification failed: ${err.message}`,
+      );
     }
-    const event = this.stripe.webhooks.constructEvent(
-      req.rawBody,
-      sig,
-      this.config.getOrThrow('STRIPE_WEBHOOK_SECRET'),
-    );
+
     if (event.type === 'checkout.session.completed') {
-      await this.cookbookPurchaseService.confirmPayment(event.data.object);
+      try {
+        await this.cookbookPurchaseService.confirmPayment(event.data.object);
+      } catch (err) {
+        // log but still return 200 so Stripe doesn't retry
+        console.error('confirmPayment failed:', err);
+      }
     }
     return { received: true };
   }
@@ -66,7 +79,7 @@ export class CookbookPurchaseController {
   }
 
   @Get('orders')
-  @UseGuards(RolesGuard, AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
   async getChefOrders(@Req() req: any) {
     const chefId = req.user.sub;
@@ -74,7 +87,7 @@ export class CookbookPurchaseController {
   }
 
   @Patch('update-payment-status/:purchaseId')
-  @UseGuards(RolesGuard, AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
   async updatePaymentStatus(
     @Req() req: any,

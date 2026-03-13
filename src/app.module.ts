@@ -9,6 +9,7 @@ import { RecipeModule } from './recipe/recipe.module';
 import { RecipeInteractionModule } from './recipe-interaction/recipe-interaction.module';
 import { CookbookModule } from './cookbook/cookbook.module';
 import { CookbookPurchaseModule } from './cookbook-purchase/cookbook-purchase.module';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { CookbookPurchaseModule } from './cookbook-purchase/cookbook-purchase.mo
     RecipeInteractionModule,
     CookbookModule,
     CookbookPurchaseModule,
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 5 }]),
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -15,16 +15,21 @@ import { ForgotPasswordDto } from './dto/forgotPassword.dto';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { ChangePasswordDto } from './dto/changePassword.dto';
 import type { Response } from 'express';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('/register')
-  async register(@Body() registerUserDto: RegisterUserDto) {
-    return await this.authService.userRegister(registerUserDto);
+  async register(
+    @Body() registerUserDto: RegisterUserDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return await this.authService.userRegister(registerUserDto, res);
   }
 
+  @UseGuards(ThrottlerGuard)
   @Post('/login')
   async login(
     @Body() loginUserDto: LoginUserDto,
@@ -60,11 +65,13 @@ export class AuthController {
     return await this.authService.changePassword(userId, changePasswordDto);
   }
 
+  @UseGuards(ThrottlerGuard)
   @Post('/forgot-password')
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return await this.authService.forgotPassword(forgotPasswordDto);
   }
 
+  @UseGuards(ThrottlerGuard)
   @Post('/reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return await this.authService.resetPassword(resetPasswordDto);

@@ -1,16 +1,10 @@
-import { IsIn, IsString } from 'class-validator';
+import { IsIn, IsNotEmpty, IsString } from 'class-validator';
 
 export class UpdateCookbookPurchaseDto {
-  @IsIn(['pending', 'paid', 'failed', 'refunded', 'shipped', 'delivered'], {
-    message:
-      'Payment Status must be one of: pending, paid, failed, refunded, shipped, delivered',
-  })
+  @IsNotEmpty()
   @IsString()
-  paymentStatus:
-    | 'pending'
-    | 'paid'
-    | 'failed'
-    | 'refunded'
-    | 'shipped'
-    | 'delivered';
+  @IsIn(['shipped', 'delivered'], {
+    message: 'Invalid payment status',
+  })
+  paymentStatus: string;
 }

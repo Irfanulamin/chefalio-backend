@@ -7,12 +7,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ResetToken, ResetTokenSchema } from './schemas/reset-token.schema';
 import { MailService } from 'src/services/mail.service';
+import { User, UserSchema } from 'src/user/schema/user.schema';
 
 @Module({
   imports: [
     UserModule,
     MongooseModule.forFeature([
       { name: ResetToken.name, schema: ResetTokenSchema },
+      { name: User.name, schema: UserSchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

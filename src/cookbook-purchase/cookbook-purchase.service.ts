@@ -11,12 +11,11 @@ import { Cookbook } from 'src/cookbook/schemas/cookbook.schema';
 import { CookbookPurchase } from './schemas/cookbook-purchase.schemas';
 import { MailService } from 'src/services/mail.service';
 import Stripe from 'stripe';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class CookbookPurchaseService {
-  private stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2026-02-25.clover',
-  });
+  private stripe: Stripe;
 
   constructor(
     @InjectModel(Cookbook.name)
@@ -26,7 +25,13 @@ export class CookbookPurchaseService {
     private purchaseModel: Model<CookbookPurchase>,
 
     private readonly mailService: MailService,
-  ) {}
+
+    private readonly config: ConfigService,
+  ) {
+    this.stripe = new Stripe(this.config.getOrThrow('STRIPE_SECRET_KEY'), {
+      apiVersion: '2026-02-25.clover',
+    });
+  }
 
   async createCheckoutSession(userId: string, dto: CreateCookbookPurchaseDto) {
     const cookbook = await this.cookbookModel.findById(dto.cookbookId);
@@ -151,10 +156,12 @@ export class CookbookPurchaseService {
     );
     if (!purchase) return;
     const cookbook = await this.cookbookModel.findById(purchase.cookbookId);
-    if (cookbook && cookbook.stockCount > 0) {
-      cookbook.stockCount -= 1;
-      await cookbook.save();
-    }
+
+    await this.cookbookModel.findOneAndUpdate(
+      { _id: purchase.cookbookId, stockCount: { $gt: 0 } },
+      { $inc: { stockCount: -1 } },
+    );
+
     await this.mailService.sendPurchaseReceipt(purchase.receiptEmail, {
       cookbookTitle: purchase.cookbookTitle,
       cookbookImage: purchase.cookbookImage,
