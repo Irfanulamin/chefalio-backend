@@ -10,6 +10,7 @@ import { User } from 'src/user/schema/user.schema';
 import { Cookbook } from './schemas/cookbook.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
+import { Role } from 'src/auth/roles.decorator';
 
 @Injectable()
 export class CookbookService {
@@ -117,10 +118,19 @@ export class CookbookService {
     };
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId: string, userRole: string) {
     const cookbook = await this.cookbookModel.findById(id);
     if (!cookbook) {
       throw new NotFoundException('Cookbook not found');
+    }
+
+    if (
+      cookbook.author.userId.toString() !== userId ||
+      userRole !== Role.Admin
+    ) {
+      throw new ForbiddenException(
+        'You are not authorized to delete this cookbook',
+      );
     }
 
     await this.cloudinaryService.deleteImage(cookbook.cookbook_image);

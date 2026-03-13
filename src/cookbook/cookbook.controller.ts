@@ -72,6 +72,7 @@ export class CookbookController {
   @Patch(':id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
+  @UseInterceptors(FileInterceptor('image'))
   update(
     @Param('id', ParseObjectIdPipe) id: string,
     @Req() req,
@@ -102,8 +103,8 @@ export class CookbookController {
 
   @Delete(':id')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.Chef)
-  remove(@Param('id', ParseObjectIdPipe) id: string) {
-    return this.cookbookService.remove(id);
+  @Roles(Role.Chef, Role.Admin)
+  remove(@Param('id', ParseObjectIdPipe) id: string, @Req() req) {
+    return this.cookbookService.remove(id, req.user.sub, req.user.role);
   }
 }

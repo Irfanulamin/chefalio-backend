@@ -237,6 +237,16 @@ export class RecipeInteractionService {
     ];
 
     const [result] = await this.interactionModel.aggregate(pipeline);
+    if (!result) {
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'Admin stats retrieved successfully',
+        topEngaged: [],
+        topLoved: [],
+        topSaved: [],
+      };
+    }
     return {
       success: true,
       statusCode: 200,

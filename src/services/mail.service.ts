@@ -4,14 +4,15 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MailService {
   private resend: Resend;
   private readonly logger = new Logger(MailService.name);
 
-  constructor() {
-    this.resend = new Resend(process.env.RESEND_API_KEY);
+  constructor(private readonly config: ConfigService) {
+    this.resend = new Resend(this.config.getOrThrow('RESEND_API_KEY'));
   }
 
   async sendMail(to: string, token: string) {
