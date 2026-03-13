@@ -4,7 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RecipeModule } from './recipe/recipe.module';
 import { RecipeInteractionModule } from './recipe-interaction/recipe-interaction.module';
 import { CookbookModule } from './cookbook/cookbook.module';
@@ -14,8 +14,14 @@ import { CookbookPurchaseModule } from './cookbook-purchase/cookbook-purchase.mo
   imports: [
     AuthModule,
     UserModule,
-    ConfigModule.forRoot(),
-    MongooseModule.forRoot(process.env.MONGODB_URI!),
+    ConfigModule.forRoot({ isGlobal: true }),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        uri: config.getOrThrow<string>('MONGODB_URI'),
+      }),
+    }),
     RecipeModule,
     RecipeInteractionModule,
     CookbookModule,

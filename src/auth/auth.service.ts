@@ -18,6 +18,7 @@ import { MailService } from 'src/services/mail.service';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { ChangePasswordDto } from './dto/changePassword.dto';
 import type { Response } from 'express';
+import crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -93,23 +94,24 @@ export class AuthService {
       forgotPasswordDto.email,
     );
     if (!user) {
-      return {
-        success: false,
-        statusCode: 404,
-        message:
-          'If the email address is registered, you will receive password reset instructions shortly.',
-      };
+      throw new BadRequestException(
+        'If the email address is registered, you will receive password reset instructions shortly.',
+      );
     }
 
-    const refreshToken = nanoid(64);
+    const rawToken = nanoid(64);
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(rawToken)
+      .digest('hex');
 
     await this.resetTokenModel.create({
-      token: refreshToken,
+      token: hashedToken,
       user: user._id,
       expiresAt: new Date(Date.now() + 1800000), // 30 minutes
     });
 
-    await this.mailService.sendMail(user.email, refreshToken);
+    await this.mailService.sendMail(user.email, rawToken);
 
     return {
       success: true,
@@ -120,27 +122,23 @@ export class AuthService {
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const hashed = crypto
+      .createHash('sha256')
+      .update(resetPasswordDto.resetToken)
+      .digest('hex');
     const token = await this.resetTokenModel.findOne({
-      token: resetPasswordDto.resetToken,
+      token: hashed,
       expiresAt: { $gte: new Date() },
     });
 
     if (!token) {
-      return {
-        success: false,
-        statusCode: 400,
-        message: 'Invalid or expired reset token',
-      };
+      throw new BadRequestException('Invalid or expired reset token');
     }
 
     const user = await this.userService.getUserById(token.user);
 
     if (!user) {
-      return {
-        success: false,
-        statusCode: 404,
-        message: 'User not found',
-      };
+      throw new BadRequestException('User not found');
     }
 
     user.password = await bcrypt.hash(resetPasswordDto.newPassword, 10);
@@ -157,11 +155,7 @@ export class AuthService {
   async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
     const user = await this.userService.getUserById(userId);
     if (!user) {
-      return {
-        success: false,
-        statusCode: 404,
-        message: 'User not found',
-      };
+      throw new BadRequestException('User not found');
     }
 
     const isCurrentPasswordValid = await bcrypt.compare(
@@ -170,11 +164,7 @@ export class AuthService {
     );
 
     if (!isCurrentPasswordValid) {
-      return {
-        success: false,
-        statusCode: 400,
-        message: 'Current password is incorrect',
-      };
+      throw new BadRequestException('Current password is incorrect');
     }
     user.password = await bcrypt.hash(changePasswordDto.newPassword, 10);
     await user.save();

@@ -21,6 +21,7 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Role, Roles } from 'src/auth/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ParseObjectIdPipe } from 'src/common/pipes/parse-object-id.pipe';
 
 @Controller('cookbooks')
 export class CookbookController {
@@ -64,7 +65,7 @@ export class CookbookController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseObjectIdPipe) id: string) {
     return this.cookbookService.findOne(id);
   }
 
@@ -72,7 +73,7 @@ export class CookbookController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
   update(
-    @Param('id') id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @Req() req,
     @Body() updateCookbookDto: UpdateCookbookDto,
     @UploadedFile(
@@ -102,7 +103,7 @@ export class CookbookController {
   @Delete(':id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseObjectIdPipe) id: string) {
     return this.cookbookService.remove(id);
   }
 }

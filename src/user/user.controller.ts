@@ -15,6 +15,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Role, Roles } from 'src/auth/roles.decorator';
@@ -24,6 +25,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateUserDto } from './dto/UpdateUser.dto';
 import { AdminUpdateUserDto } from './dto/AdminUpdateUser.dto';
 import { CreateUserDto } from './dto/CreateUser.dto';
+import { ParseObjectIdPipe } from 'src/common/pipes/parse-object-id.pipe';
 
 @Controller('users')
 export class UserController {
@@ -45,13 +47,10 @@ export class UserController {
     @Query('search') search: string = '',
     @Query('isActive') isActiveStr?: string,
   ) {
-    const isActive = isActiveStr === 'true';
+    const isActive =
+      isActiveStr === undefined ? undefined : isActiveStr === 'true';
     if (role && !['user', 'chef', 'admin'].includes(role)) {
-      return {
-        success: false,
-        statusCode: 400,
-        message: 'Invalid role. Valid roles are user, chef, admin.',
-      };
+      throw new BadRequestException('Invalid role filter');
     }
     return this.userService.getAllUsers(page, limit, role, search, isActive);
   }
@@ -89,14 +88,17 @@ export class UserController {
   @Patch('/update/:id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
-  adminUpdate(@Param('id') id: string, @Body() dto: AdminUpdateUserDto) {
+  adminUpdate(
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Body() dto: AdminUpdateUserDto,
+  ) {
     return this.userService.updateUserByAdmin(id, dto);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
   @Get('/:id')
-  getUser(@Param('id') id: string) {
+  getUser(@Param('id', ParseObjectIdPipe) id: string) {
     return this.userService.getUserById(id);
   }
 }

@@ -81,16 +81,6 @@ export class UserService {
       .skip((page - 1) * limit)
       .limit(limit);
 
-    if (!data.length) {
-      return {
-        success: false,
-        statusCode: 404,
-        message: 'No users found',
-        data: [],
-        pagination: { total: 0, page, limit, pages: 0 },
-      };
-    }
-
     return {
       success: true,
       statusCode: 200,
@@ -192,61 +182,57 @@ export class UserService {
   }
 
   async getUserById(userId: Types.ObjectId | string) {
-    return this.userModel.findById(userId);
+    return this.userModel
+      .findById(userId)
+      .select('-password -__v -createdAt -updatedAt');
   }
 
   async getUserAnalytics() {
-    const totalUsers = await this.userModel.countDocuments();
-    const totalAdmins = await this.userModel.countDocuments({ role: 'admin' });
-    const totalChefs = await this.userModel.countDocuments({ role: 'chef' });
-    const totalMembers = await this.userModel.countDocuments({ role: 'user' });
-    const activeUsers = await this.userModel.countDocuments({ isActive: true });
-    const activeChefs = await this.userModel.countDocuments({
-      role: 'chef',
-      isActive: true,
-    });
-    const activeMembers = await this.userModel.countDocuments({
-      role: 'user',
-      isActive: true,
-    });
-    const activeAdmins = await this.userModel.countDocuments({
-      role: 'admin',
-      isActive: true,
-    });
-    const recentJoinedByRole = await this.userModel.aggregate([
-      {
-        $group: {
-          _id: {
-            role: '$role',
-            date: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+    const [roleCounts, activeCounts, recentJoined] = await Promise.all([
+      this.userModel.aggregate([
+        { $group: { _id: '$role', count: { $sum: 1 } } },
+      ]),
+      this.userModel.aggregate([
+        { $match: { isActive: true } },
+        { $group: { _id: '$role', count: { $sum: 1 } } },
+      ]),
+      this.userModel.aggregate([
+        {
+          $group: {
+            _id: {
+              role: '$role',
+              date: {
+                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+              },
+            },
+            count: { $sum: 1 },
           },
-          count: { $sum: 1 },
         },
-      },
-      { $sort: { '_id.date': -1 } },
-      { $limit: 30 },
+        { $sort: { '_id.date': -1 } },
+        { $limit: 30 },
+      ]),
     ]);
-
-    const data = {
-      totalUsers,
-      totalAdmins,
-      totalChefs,
-      totalMembers,
-      activeUsers,
-      activeChefs,
-      activeMembers,
-      activeAdmins,
-      recentJoinedByRole: recentJoinedByRole.map((item) => ({
-        date: item._id.date,
-        role: item._id.role,
-        count: item.count,
-      })),
-    };
+    const byRole = Object.fromEntries(roleCounts.map((r) => [r._id, r.count]));
+    const byActive = Object.fromEntries(
+      activeCounts.map((r) => [r._id, r.count]),
+    );
     return {
       success: true,
       statusCode: 200,
-      message: 'User analytics retrieved successfully',
-      data,
+      data: {
+        totalUsers: roleCounts.reduce((s, r) => s + r.count, 0),
+        totalAdmins: byRole['admin'] ?? 0,
+        totalChefs: byRole['chef'] ?? 0,
+        totalMembers: byRole['user'] ?? 0,
+        activeAdmins: byActive['admin'] ?? 0,
+        activeChefs: byActive['chef'] ?? 0,
+        activeMembers: byActive['user'] ?? 0,
+        recentJoinedByRole: recentJoined.map((i) => ({
+          date: i._id.date,
+          role: i._id.role,
+          count: i.count,
+        })),
+      },
     };
   }
 }

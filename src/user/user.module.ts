@@ -9,7 +9,6 @@ import { RecipeModule } from 'src/recipe/recipe.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     RecipeModule,
   ],

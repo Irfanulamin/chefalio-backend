@@ -23,6 +23,7 @@ import { RolesGuard } from 'src/auth/roles.guard';
 import { Role, Roles } from 'src/auth/roles.decorator';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
+import { ParseObjectIdPipe } from 'src/common/pipes/parse-object-id.pipe';
 
 @Controller('recipes')
 export class RecipeController {
@@ -51,9 +52,6 @@ export class RecipeController {
     )
     images: Express.Multer.File[],
   ) {
-    if (typeof dto.instructions === 'string') {
-      dto.instructions = JSON.parse(dto.instructions);
-    }
     return this.recipeService.createRecipe(req.user.sub, dto, images);
   }
 
@@ -93,7 +91,7 @@ export class RecipeController {
 
   @UseGuards(AuthGuard)
   @Get(':id')
-  async getRecipeById(@Param('id') id: string) {
+  async getRecipeById(@Param('id', ParseObjectIdPipe) id: string) {
     return this.recipeService.getRecipeById(id);
   }
 
@@ -101,7 +99,7 @@ export class RecipeController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef, Role.Admin)
   async deleteRecipe(
-    @Param('id') id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @Req()
     req,
   ) {
@@ -113,7 +111,7 @@ export class RecipeController {
   @Patch('/update/:id')
   @UseInterceptors(FilesInterceptor('images'))
   async updateRecipe(
-    @Param('id') id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @Body() dto: UpdateRecipeDto,
     @Req() req,
     @UploadedFiles(

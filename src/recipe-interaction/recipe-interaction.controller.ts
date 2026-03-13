@@ -3,6 +3,7 @@ import { RecipeInteractionService } from './recipe-interaction.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Role, Roles } from 'src/auth/roles.decorator';
+import { ParseObjectIdPipe } from 'src/common/pipes/parse-object-id.pipe';
 
 @Controller('recipe-interaction')
 export class RecipeInteractionController {
@@ -13,14 +14,20 @@ export class RecipeInteractionController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.User)
   @Post('/save/:recipeId')
-  toggleSave(@Param('recipeId') recipeId: string, @Req() req) {
+  toggleSave(
+    @Param('recipeId', ParseObjectIdPipe) recipeId: string,
+    @Req() req,
+  ) {
     return this.recipeInteractionService.toggleSave(req.user.sub, recipeId);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.User)
   @Post('/love/:recipeId')
-  toggleLove(@Param('recipeId') recipeId: string, @Req() req) {
+  toggleLove(
+    @Param('recipeId', ParseObjectIdPipe) recipeId: string,
+    @Req() req,
+  ) {
     return this.recipeInteractionService.toggleLove(req.user.sub, recipeId);
   }
 
@@ -55,7 +62,10 @@ export class RecipeInteractionController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.User)
   @Get('/stats/:recipeId')
-  getRecipeStats(@Param('recipeId') recipeId: string, @Req() req) {
+  getRecipeStats(
+    @Param('recipeId', ParseObjectIdPipe) recipeId: string,
+    @Req() req,
+  ) {
     return this.recipeInteractionService.getInteractionStatus(
       req.user.sub,
       recipeId,

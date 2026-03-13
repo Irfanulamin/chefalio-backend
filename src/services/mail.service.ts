@@ -1,9 +1,14 @@
 import { Resend } from 'resend';
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 
 @Injectable()
 export class MailService {
   private resend: Resend;
+  private readonly logger = new Logger(MailService.name);
 
   constructor() {
     this.resend = new Resend(process.env.RESEND_API_KEY);
@@ -58,7 +63,10 @@ export class MailService {
 
       console.log(`Email sent to ${to}`);
     } catch (error) {
-      console.error(`Failed to send email to ${to}:`, error);
+      this.logger.error(`Failed to send password reset email to ${to}`, error);
+      throw new InternalServerErrorException(
+        'Failed to send password reset email. Please try again.',
+      );
     }
   }
 
@@ -121,7 +129,10 @@ export class MailService {
 
       console.log(`Purchase receipt sent to ${to}`);
     } catch (error) {
-      console.error(`Failed to send purchase receipt to ${to}:`, error);
+      this.logger.error(`Failed to send purchase receipt to ${to}`, error);
+      throw new InternalServerErrorException(
+        'Failed to send purchase receipt. Please try again.',
+      );
     }
   }
 }

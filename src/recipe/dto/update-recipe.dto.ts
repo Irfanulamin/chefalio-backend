@@ -10,17 +10,7 @@ import {
   IsIn,
 } from 'class-validator';
 import { Type, Transform, plainToInstance } from 'class-transformer';
-
-export class InstructionDto {
-  @IsOptional()
-  step?: number;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(5)
-  @MaxLength(500)
-  instruction?: string;
-}
+import { InstructionDto } from './instruction.dto';
 
 export class UpdateRecipeDto {
   @IsOptional()

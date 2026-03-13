@@ -14,13 +14,22 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Role, Roles } from 'src/auth/roles.decorator';
 import { UpdateCookbookPurchaseDto } from './dto/update-cookbook-purchase.dto';
+import { ConfigService } from '@nestjs/config';
+import Stripe from 'stripe';
+import type { RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
+import { ParseObjectIdPipe } from 'src/common/pipes/parse-object-id.pipe';
 
 @UseGuards(AuthGuard)
 @Controller('cookbook-purchase')
 export class CookbookPurchaseController {
+  private stripe: Stripe;
   constructor(
     private readonly cookbookPurchaseService: CookbookPurchaseService,
-  ) {}
+    private readonly config: ConfigService,
+  ) {
+    this.stripe = new Stripe(this.config.getOrThrow('STRIPE_SECRET_KEY'));
+  }
 
   @Post('payment')
   async purchaseCookbook(
@@ -30,6 +39,23 @@ export class CookbookPurchaseController {
     const userId = req.user.sub;
 
     return this.cookbookPurchaseService.createCheckoutSession(userId, dto);
+  }
+
+  @Post('webhook')
+  async handleStripeWebhook(@Req() req: RawBodyRequest<Request>) {
+    const sig = req.headers['stripe-signature'] as string;
+    if (!req.rawBody) {
+      throw new Error('Missing raw body');
+    }
+    const event = this.stripe.webhooks.constructEvent(
+      req.rawBody,
+      sig,
+      this.config.getOrThrow('STRIPE_WEBHOOK_SECRET'),
+    );
+    if (event.type === 'checkout.session.completed') {
+      await this.cookbookPurchaseService.confirmPayment(event.data.object);
+    }
+    return { received: true };
   }
 
   @Get('my-purchases')
@@ -52,7 +78,7 @@ export class CookbookPurchaseController {
   async updatePaymentStatus(
     @Req() req: any,
     @Body() dto: UpdateCookbookPurchaseDto,
-    @Param('purchaseId') purchaseId: string,
+    @Param('purchaseId', ParseObjectIdPipe) purchaseId: string,
   ) {
     const chefId = req.user.sub;
     return await this.cookbookPurchaseService.updatePaymentStatus(

@@ -51,8 +51,8 @@ export class Recipe {
   @Prop({ type: [String], index: true })
   tags: string[];
 
-  @Prop({ index: true })
-  difficulty: string;
+  @Prop({ index: true, enum: ['beginner', 'intermediate', 'advance'] })
+  difficulty: 'beginner' | 'intermediate' | 'advance';
 
   @Prop({
     type: [String],

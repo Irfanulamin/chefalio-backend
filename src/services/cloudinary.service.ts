@@ -5,11 +5,11 @@ import { Readable } from 'stream';
 
 @Injectable()
 export class CloudinaryService {
-  constructor() {
+  constructor(private readonly config: ConfigService) {
     cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
+      cloud_name: config.getOrThrow('CLOUDINARY_CLOUD_NAME'),
+      api_key: config.getOrThrow('CLOUDINARY_API_KEY'),
+      api_secret: config.getOrThrow('CLOUDINARY_API_SECRET'),
     });
   }
 
@@ -48,8 +48,15 @@ export class CloudinaryService {
     });
   }
 
-  async getCloudinaryPublicId(url: string) {
-    const match = url.match(/\/([^/]+)\.(jpg|png|jpeg)$/);
-    return match ? `recipe_images/${match[1]}` : null;
+  getCloudinaryPublicId(url: string): string | null {
+    try {
+      const urlObj = new URL(url);
+      const match = urlObj.pathname.match(
+        /\/image\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i,
+      );
+      return match ? match[1] : null;
+    } catch {
+      return null;
+    }
   }
 }

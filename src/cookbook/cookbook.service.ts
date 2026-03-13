@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateCookbookDto } from './dto/create-cookbook.dto';
 import { UpdateCookbookDto } from './dto/update-cookbook.dto';
 import { CloudinaryService } from 'src/services/cloudinary.service';
@@ -21,11 +25,7 @@ export class CookbookService {
   ) {
     const user = await this.userModel.findById(userId);
     if (!user) {
-      return {
-        success: false,
-        message: 'User not found',
-        statusCode: 404,
-      };
+      throw new NotFoundException('User not found');
     }
 
     const cookbook_image = await this.cloudinaryService.uploadImage(image);
@@ -76,11 +76,7 @@ export class CookbookService {
   async findOne(id: string) {
     const cookbook = await this.cookbookModel.findById(id);
     if (!cookbook) {
-      return {
-        success: false,
-        message: 'Cookbook not found',
-        statusCode: 404,
-      };
+      throw new NotFoundException('Cookbook not found');
     }
     return {
       success: true,
@@ -97,18 +93,12 @@ export class CookbookService {
   ) {
     const cookbook = await this.cookbookModel.findById(id);
     if (!cookbook) {
-      return {
-        success: false,
-        message: 'Cookbook not found',
-        statusCode: 404,
-      };
+      throw new NotFoundException('Cookbook not found');
     }
     if (cookbook.author.userId.toString() !== userId) {
-      return {
-        success: false,
-        message: 'Unauthorized',
-        statusCode: 403,
-      };
+      throw new ForbiddenException(
+        'You are not authorized to update this cookbook',
+      );
     }
     let cookbook_image = cookbook.cookbook_image;
     if (image && cookbook.cookbook_image) {
@@ -130,12 +120,9 @@ export class CookbookService {
   async remove(id: string) {
     const cookbook = await this.cookbookModel.findById(id);
     if (!cookbook) {
-      return {
-        success: false,
-        message: 'Cookbook not found',
-        statusCode: 404,
-      };
+      throw new NotFoundException('Cookbook not found');
     }
+
     await this.cloudinaryService.deleteImage(cookbook.cookbook_image);
     await this.cookbookModel.findByIdAndDelete(id);
     return {
