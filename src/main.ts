@@ -14,7 +14,6 @@ const createNestServer = async (expressInstance: express.Express) => {
     { rawBody: true },
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   app.use(cookieParser());
 
   app.useGlobalPipes(
