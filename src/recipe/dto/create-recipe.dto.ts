@@ -43,13 +43,13 @@ export class CreateRecipeDto {
   @ValidateNested({ each: true })
   @Type(() => InstructionDto)
   @Transform(({ value }) => {
-    let arr: any = [];
+    let arr: unknown[] = [];
     if (!value) return [];
     if (Array.isArray(value)) arr = value;
     else {
       try {
-        arr = JSON.parse(value);
-        if (!Array.isArray(arr)) arr = [];
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) arr = parsed;
       } catch {
         arr = [];
       }

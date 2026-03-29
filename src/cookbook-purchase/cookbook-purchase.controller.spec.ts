@@ -11,7 +11,9 @@ describe('CookbookPurchaseController', () => {
       providers: [CookbookPurchaseService],
     }).compile();
 
-    controller = module.get<CookbookPurchaseController>(CookbookPurchaseController);
+    controller = module.get<CookbookPurchaseController>(
+      CookbookPurchaseController,
+    );
   });
 
   it('should be defined', () => {

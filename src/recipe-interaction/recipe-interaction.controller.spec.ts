@@ -11,7 +11,9 @@ describe('RecipeInteractionController', () => {
       providers: [RecipeInteractionService],
     }).compile();
 
-    controller = module.get<RecipeInteractionController>(RecipeInteractionController);
+    controller = module.get<RecipeInteractionController>(
+      RecipeInteractionController,
+    );
   });
 
   it('should be defined', () => {

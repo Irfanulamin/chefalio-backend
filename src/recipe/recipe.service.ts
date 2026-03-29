@@ -11,7 +11,6 @@ import { Model, Types } from 'mongoose';
 import { CloudinaryService } from 'src/services/cloudinary.service';
 import { Recipe } from './schemas/recipe.schema';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
-import { Role } from 'src/auth/roles.decorator';
 
 @Injectable()
 export class RecipeService {
@@ -183,8 +182,7 @@ export class RecipeService {
     // STEP 3: All validation passed — now delete from Cloudinary (once)
     if (updateRecipeDto.removeImages?.length) {
       for (const imgUrl of updateRecipeDto.removeImages) {
-        const publicId =
-          await this.cloudinaryService.getCloudinaryPublicId(imgUrl);
+        const publicId = this.cloudinaryService.getCloudinaryPublicId(imgUrl);
         if (publicId) await this.cloudinaryService.deleteImage(publicId);
       }
       recipe.images = recipe.images.filter(

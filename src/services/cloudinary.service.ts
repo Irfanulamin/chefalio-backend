@@ -21,6 +21,7 @@ export class CloudinaryService {
       const stream = cloudinary.uploader.upload_stream(
         { folder, resource_type: 'image' } as UploadApiOptions,
         (error, result) => {
+          // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
           if (error) return reject(error);
           if (!result) return reject(new Error('Upload failed'));
           resolve(result.secure_url);
@@ -36,11 +37,11 @@ export class CloudinaryService {
 
   async deleteImage(publicId: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      cloudinary.uploader.destroy(
+      void cloudinary.uploader.destroy(
         publicId,
         { resource_type: 'image' },
-        (error, result) => {
-          if (error) return reject(error);
+        (error) => {
+          if (error) return reject(new Error(String(error)));
           // optionally, check result.result === 'ok'
           resolve();
         },

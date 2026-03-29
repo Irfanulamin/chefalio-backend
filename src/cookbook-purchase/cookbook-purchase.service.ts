@@ -4,7 +4,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreateCookbookPurchaseDto } from './dto/create-cookbook-purchase.dto';
-import { UpdateCookbookPurchaseDto } from './dto/update-cookbook-purchase.dto';
 import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Cookbook } from 'src/cookbook/schemas/cookbook.schema';
@@ -187,8 +186,8 @@ export class CookbookPurchaseService {
       ]),
     ]);
 
-    const totalEarned = totals[0]?.totalEarned ?? 0;
-    const totalOrders = totals[0]?.totalOrders ?? 0;
+    const totalEarned = (totals[0]?.totalEarned as number) ?? 0;
+    const totalOrders = (totals[0]?.totalOrders as number) ?? 0;
     const totalProfit = parseFloat((totalEarned * CHEF_PROFIT_RATE).toFixed(2));
 
     return {
@@ -259,8 +258,8 @@ export class CookbookPurchaseService {
       ]),
     ]);
 
-    const totalRevenue = totals[0]?.totalRevenue ?? 0;
-    const totalOrders = totals[0]?.totalOrders ?? 0;
+    const totalRevenue = (totals[0]?.totalRevenue as number) ?? 0;
+    const totalOrders = (totals[0]?.totalOrders as number) ?? 0;
     const totalProfit = parseFloat(
       (totalRevenue * ADMIN_PROFIT_RATE).toFixed(2),
     );
@@ -287,7 +286,6 @@ export class CookbookPurchaseService {
       { new: true },
     );
     if (!purchase) return;
-    const cookbook = await this.cookbookModel.findById(purchase.cookbookId);
 
     await this.cookbookModel.findOneAndUpdate(
       { _id: purchase.cookbookId, stockCount: { $gt: 0 } },
