@@ -55,7 +55,7 @@ export class AuthService {
   }
 
   async userLogin(loginUserDto: LoginUserDto, res: Response) {
-    const userNameOrEmail = loginUserDto.email ?? loginUserDto.username;
+    const userNameOrEmail = loginUserDto.usernameOrEmail;
 
     if (!userNameOrEmail) {
       throw new BadRequestException('Email or username is required');

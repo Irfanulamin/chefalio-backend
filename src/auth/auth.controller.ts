@@ -40,12 +40,12 @@ export class AuthController {
 
   @UseGuards(AuthGuard)
   @Get('/me')
-  async getMe(@Request() req) {
+  getMe(@Request() req) {
     return { userId: req.user.sub, role: req.user.role };
   }
 
   @Post('/logout')
-  async logout(@Res({ passthrough: true }) res: Response) {
+  logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('access_token');
     return {
       success: true,
