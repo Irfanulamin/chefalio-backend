@@ -7,13 +7,13 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { RegisterUserDto } from 'src/auth/dto/registerUser.dto';
 import { User } from './schema/user.schema';
-import { Model, mongo, Mongoose } from 'mongoose';
+import { Model, mongo } from 'mongoose';
 import { UpdateUserDto } from './dto/UpdateUser.dto';
 import bcrypt from 'bcrypt';
 import { AdminUpdateUserDto } from './dto/AdminUpdateUser.dto';
 import { CreateUserDto } from './dto/CreateUser.dto';
 import { Types } from 'mongoose';
-import { CloudinaryService } from 'src/services/cloudinary.service';
+import { CloudinaryService } from '../services/cloudinary.service';
 import { RecipeService } from 'src/recipe/recipe.service';
 
 @Injectable()
@@ -164,6 +164,7 @@ export class UserService {
         ...dto,
         password: hash,
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...userWithoutPassword } = createdUser.toObject();
       return {
         success: true,
