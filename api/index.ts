@@ -1,10 +1,11 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { AppModule } from '../src/app.module';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+import serverless from 'serverless-http';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create(AppModule);
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   app.use(cookieParser());
@@ -18,19 +19,10 @@ async function bootstrap() {
     }),
   );
 
-  app.enableCors(
-    process.env.NODE_ENV === 'production'
-      ? {
-          origin: process.env.ALLOWED_ORIGIN,
-          credentials: true,
-        }
-      : {
-          origin: 'http://localhost:3000',
-          credentials: true,
-        },
-  );
+  await app.init();
 
-  await app.listen(process.env.PORT ?? 5000);
+  return app.getHttpAdapter().getInstance();
 }
 
-bootstrap();
+// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+export default serverless(await bootstrap());
