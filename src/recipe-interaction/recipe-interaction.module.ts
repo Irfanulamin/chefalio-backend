@@ -6,7 +6,7 @@ import {
   RecipeInteraction,
   RecipeInteractionSchema,
 } from './schemas/recipe-interaction.schema';
-import { Recipe, RecipeSchema } from 'src/recipe/schemas/recipe.schema';
+import { Recipe, RecipeSchema } from '../recipe/schemas/recipe.schema';
 @Module({
   imports: [
     MongooseModule.forFeature([

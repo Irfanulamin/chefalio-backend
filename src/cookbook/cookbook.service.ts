@@ -6,11 +6,11 @@ import {
 import { CreateCookbookDto } from './dto/create-cookbook.dto';
 import { UpdateCookbookDto } from './dto/update-cookbook.dto';
 import { CloudinaryService } from '../services/cloudinary.service';
-import { User } from 'src/user/schema/user.schema';
+import { User } from '../user/schema/user.schema';
 import { Cookbook } from './schemas/cookbook.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { Role } from 'src/auth/roles.decorator';
+import { Role } from '../auth/roles.decorator';
 
 @Injectable()
 export class CookbookService {

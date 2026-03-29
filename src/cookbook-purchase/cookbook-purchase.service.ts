@@ -7,7 +7,7 @@ import {
 import { CreateCookbookPurchaseDto } from './dto/create-cookbook-purchase.dto';
 import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { Cookbook } from 'src/cookbook/schemas/cookbook.schema';
+import { Cookbook } from '../cookbook/schemas/cookbook.schema';
 import { CookbookPurchase } from './schemas/cookbook-purchase.schemas';
 import { MailService } from '../services/mail.service';
 import Stripe from 'stripe';

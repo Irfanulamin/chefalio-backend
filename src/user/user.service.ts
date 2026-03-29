@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { RegisterUserDto } from 'src/auth/dto/registerUser.dto';
+import { RegisterUserDto } from '../auth/dto/registerUser.dto';
 import { User } from './schema/user.schema';
 import { Model, mongo } from 'mongoose';
 import { UpdateUserDto } from './dto/UpdateUser.dto';
@@ -14,7 +14,7 @@ import { AdminUpdateUserDto } from './dto/AdminUpdateUser.dto';
 import { CreateUserDto } from './dto/CreateUser.dto';
 import { Types } from 'mongoose';
 import { CloudinaryService } from '../services/cloudinary.service';
-import { RecipeService } from 'src/recipe/recipe.service';
+import { RecipeService } from '../recipe/recipe.service';
 
 @Injectable()
 export class UserService {

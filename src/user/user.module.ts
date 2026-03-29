@@ -5,7 +5,7 @@ import { User, UserSchema } from './schema/user.schema';
 import { UserController } from './user.controller';
 import { ConfigModule } from '@nestjs/config';
 import { CloudinaryService } from '../services/cloudinary.service';
-import { RecipeModule } from 'src/recipe/recipe.module';
+import { RecipeModule } from '../recipe/recipe.module';
 
 @Module({
   imports: [

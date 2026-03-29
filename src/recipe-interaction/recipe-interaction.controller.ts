@@ -1,9 +1,9 @@
 import { Controller, Get, Post, Param, UseGuards, Req } from '@nestjs/common';
 import { RecipeInteractionService } from './recipe-interaction.service';
-import { AuthGuard } from 'src/auth/auth.guard';
-import { RolesGuard } from 'src/auth/roles.guard';
-import { Role, Roles } from 'src/auth/roles.decorator';
-import { ParseObjectIdPipe } from 'src/common/pipes/parse-object-id.pipe';
+import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Role, Roles } from '../auth/roles.decorator';
+import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 
 @Controller('recipe-interaction')
 export class RecipeInteractionController {

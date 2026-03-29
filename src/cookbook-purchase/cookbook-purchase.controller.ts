@@ -12,15 +12,15 @@ import {
 } from '@nestjs/common';
 import { CookbookPurchaseService } from './cookbook-purchase.service';
 import { CreateCookbookPurchaseDto } from './dto/create-cookbook-purchase.dto';
-import { AuthGuard } from 'src/auth/auth.guard';
-import { RolesGuard } from 'src/auth/roles.guard';
-import { Role, Roles } from 'src/auth/roles.decorator';
+import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Role, Roles } from '../auth/roles.decorator';
 import { UpdateCookbookPurchaseDto } from './dto/update-cookbook-purchase.dto';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
-import { ParseObjectIdPipe } from 'src/common/pipes/parse-object-id.pipe';
+import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 
 @Controller('cookbook-purchase')
 export class CookbookPurchaseController {

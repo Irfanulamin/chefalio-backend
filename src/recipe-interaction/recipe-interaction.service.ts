@@ -2,7 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { Model, PipelineStage, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { Recipe } from 'src/recipe/schemas/recipe.schema';
+import { Recipe } from '../recipe/schemas/recipe.schema';
 import { RecipeInteraction } from './schemas/recipe-interaction.schema';
 
 @Injectable()

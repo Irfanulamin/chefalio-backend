@@ -2,10 +2,10 @@ import { forwardRef, Module } from '@nestjs/common';
 import { RecipeService } from './recipe.service';
 import { RecipeController } from './recipe.controller';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from 'src/user/schema/user.schema';
+import { User, UserSchema } from '../user/schema/user.schema';
 import { CloudinaryService } from '../services/cloudinary.service';
 import { Recipe, RecipeSchema } from './schemas/recipe.schema';
-import { AuthModule } from 'src/auth/auth.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
