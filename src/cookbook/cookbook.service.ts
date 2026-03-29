@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { CreateCookbookDto } from './dto/create-cookbook.dto';
 import { UpdateCookbookDto } from './dto/update-cookbook.dto';
-import { CloudinaryService } from 'src/services/cloudinary.service';
+import { CloudinaryService } from '../services/cloudinary.service';
 import { User } from 'src/user/schema/user.schema';
 import { Cookbook } from './schemas/cookbook.schema';
 import { Model } from 'mongoose';

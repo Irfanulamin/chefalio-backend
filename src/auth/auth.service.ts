@@ -15,7 +15,7 @@ import { nanoid } from 'nanoid';
 import { Model } from 'mongoose';
 import { ResetToken } from './schemas/reset-token.schema';
 import { InjectModel } from '@nestjs/mongoose';
-import { MailService } from 'src/services/mail.service';
+import { MailService } from '../services/mail.service';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { ChangePasswordDto } from './dto/changePassword.dto';
 import type { Response } from 'express';

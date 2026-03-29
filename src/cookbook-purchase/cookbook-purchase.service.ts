@@ -9,7 +9,7 @@ import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Cookbook } from 'src/cookbook/schemas/cookbook.schema';
 import { CookbookPurchase } from './schemas/cookbook-purchase.schemas';
-import { MailService } from 'src/services/mail.service';
+import { MailService } from '../services/mail.service';
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
 

@@ -7,7 +7,7 @@ import {
   CookbookPurchase,
   CookbookPurchaseSchema,
 } from './schemas/cookbook-purchase.schemas';
-import { MailService } from 'src/services/mail.service';
+import { MailService } from '../services/mail.service';
 
 @Module({
   imports: [
