@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   CanActivate,
   ExecutionContext,

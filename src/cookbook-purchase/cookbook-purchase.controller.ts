@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Controller,
   Post,
@@ -35,7 +34,7 @@ export class CookbookPurchaseController {
   @UseGuards(AuthGuard)
   @Post('payment')
   async purchaseCookbook(
-    @Req() req: any,
+    @Req() req: Request & { user: { sub: string } },
     @Body() dto: CreateCookbookPurchaseDto,
   ) {
     const userId = req.user.sub;
@@ -74,7 +73,7 @@ export class CookbookPurchaseController {
 
   @UseGuards(AuthGuard)
   @Get('my-purchases')
-  async getMyPurchases(@Req() req: any) {
+  async getMyPurchases(@Req() req: Request & { user: { sub: string } }) {
     const userId = req.user.sub;
     return this.cookbookPurchaseService.getUserPurchases(userId);
   }
@@ -82,7 +81,7 @@ export class CookbookPurchaseController {
   @Get('orders')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
-  async getChefOrders(@Req() req: any) {
+  async getChefOrders(@Req() req: Request & { user: { sub: string } }) {
     const chefId = req.user.sub;
     return this.cookbookPurchaseService.getChefOrders(chefId);
   }
@@ -90,7 +89,9 @@ export class CookbookPurchaseController {
   @Get('analytics/chef')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
-  async getChefEarningsAnalytics(@Req() req: any) {
+  async getChefEarningsAnalytics(
+    @Req() req: Request & { user: { sub: string } },
+  ) {
     return this.cookbookPurchaseService.getChefEarningsAnalytics(req.user.sub);
   }
 
@@ -105,7 +106,7 @@ export class CookbookPurchaseController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
   async updatePaymentStatus(
-    @Req() req: any,
+    @Req() req: Request & { user: { sub: string } },
     @Body() dto: UpdateCookbookPurchaseDto,
     @Param('purchaseId', ParseObjectIdPipe) purchaseId: string,
   ) {

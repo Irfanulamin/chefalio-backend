@@ -7,7 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { RegisterUserDto } from '../auth/dto/registerUser.dto';
 import { User } from './schema/user.schema';
-import { Model, mongo } from 'mongoose';
+import { Model, mongo, UpdateQuery } from 'mongoose';
 import { UpdateUserDto } from './dto/UpdateUser.dto';
 import bcrypt from 'bcrypt';
 import { AdminUpdateUserDto } from './dto/AdminUpdateUser.dto';
@@ -56,7 +56,7 @@ export class UserService {
     search: string = '',
     isActive?: boolean,
   ) {
-    const filter: any = {};
+    const filter: Record<string, any> = {};
 
     if (role) {
       filter.role = role;
@@ -112,7 +112,7 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
-    const updateData: any = { ...dto };
+    const updateData: UpdateQuery<User> | undefined = { ...dto };
 
     if (dto.fullName) {
       await this.recipeService.syncAuthorFullName(userId, dto.fullName);
@@ -143,7 +143,7 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
-    const updateData: any = { ...dto };
+    const updateData: UpdateQuery<User> | undefined = { ...dto };
 
     const updatedUser = await this.userModel
       .findByIdAndUpdate(userId, updateData, { new: true })

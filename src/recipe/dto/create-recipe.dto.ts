@@ -48,7 +48,7 @@ export class CreateRecipeDto {
     if (Array.isArray(value)) arr = value;
     else {
       try {
-        const parsed = JSON.parse(value);
+        const parsed = JSON.parse(value as string);
         if (Array.isArray(parsed)) arr = parsed;
       } catch {
         arr = [];

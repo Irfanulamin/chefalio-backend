@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   DefaultValuePipe,
-  Delete,
   Get,
   HttpStatus,
   Param,
@@ -66,7 +65,7 @@ export class UserController {
   @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('image'))
   async updateOwnProfile(
-    @Req() req,
+    @Req() req: Request & { user: { sub: string } },
     @Body() dto: UpdateUserDto,
     @UploadedFile(
       new ParseFilePipeBuilder()

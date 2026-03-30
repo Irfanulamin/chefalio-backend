@@ -10,7 +10,6 @@ import { User } from '../user/schema/user.schema';
 import { Cookbook } from './schemas/cookbook.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { Role } from '../auth/roles.decorator';
 
 @Injectable()
 export class CookbookService {
@@ -50,7 +49,7 @@ export class CookbookService {
 
   async findAll(page: number, limit: number, search: string, author: string) {
     const skip = (page - 1) * limit;
-    const query: any = {};
+    const query: Record<string, any> = {};
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -118,16 +117,17 @@ export class CookbookService {
     };
   }
 
-  async remove(id: string, userId: string, userRole: string) {
+  async remove(
+    id: string,
+    userId: string,
+    userRole: 'user' | 'chef' | 'admin',
+  ) {
     const cookbook = await this.cookbookModel.findById(id);
     if (!cookbook) {
       throw new NotFoundException('Cookbook not found');
     }
 
-    if (
-      cookbook.author.userId.toString() !== userId &&
-      userRole !== Role.Admin
-    ) {
+    if (cookbook.author.userId.toString() !== userId && userRole !== 'admin') {
       throw new ForbiddenException(
         'You are not authorized to delete this cookbook',
       );

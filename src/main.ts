@@ -3,7 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
-import express from 'express';
+import express, { Request, Response } from 'express';
 
 const server = express();
 
@@ -42,7 +42,7 @@ const createNestServer = async (expressInstance: express.Express) => {
 
 let isServerReady = false;
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: Request, res: Response) {
   if (!isServerReady) {
     await createNestServer(server);
     isServerReady = true;

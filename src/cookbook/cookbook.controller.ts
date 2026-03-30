@@ -32,7 +32,7 @@ export class CookbookController {
   @Roles(Role.Chef)
   @UseInterceptors(FileInterceptor('image'))
   create(
-    @Req() req,
+    @Req() req: Request & { user: { sub: string } },
     @Body() dto: CreateCookbookDto,
     @UploadedFile(
       new ParseFilePipeBuilder()
@@ -75,7 +75,7 @@ export class CookbookController {
   @UseInterceptors(FileInterceptor('image'))
   update(
     @Param('id', ParseObjectIdPipe) id: string,
-    @Req() req,
+    @Req() req: Request & { user: { sub: string } },
     @Body() updateCookbookDto: UpdateCookbookDto,
     @UploadedFile(
       new ParseFilePipeBuilder()
@@ -104,7 +104,11 @@ export class CookbookController {
   @Delete(':id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef, Role.Admin)
-  remove(@Param('id', ParseObjectIdPipe) id: string, @Req() req) {
+  remove(
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Req()
+    req: Request & { user: { sub: string; role: 'user' | 'chef' | 'admin' } },
+  ) {
     return this.cookbookService.remove(id, req.user.sub, req.user.role);
   }
 }

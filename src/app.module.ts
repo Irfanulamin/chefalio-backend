@@ -36,6 +36,6 @@ import { JwtModule, JwtService } from '@nestjs/jwt';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 5 }]),
   ],
   controllers: [AppController],
-  providers: [AppService, ConfigService,JwtService],
+  providers: [AppService, ConfigService, JwtService],
 })
 export class AppModule {}

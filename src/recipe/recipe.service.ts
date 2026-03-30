@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   BadRequestException,
   ForbiddenException,
@@ -67,7 +66,7 @@ export class RecipeService {
     difficulty: string = '',
     author: string = '',
   ) {
-    const filter: any = {};
+    const filter: Record<string, any> = {};
 
     if (search) {
       filter.$or = [

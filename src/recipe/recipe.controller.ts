@@ -34,7 +34,7 @@ export class RecipeController {
   @Roles(Role.Chef)
   @UseInterceptors(FilesInterceptor('images', 3))
   async createRecipe(
-    @Req() req,
+    @Req() req: Request & { user: { sub: string } },
     @Body() dto: CreateRecipeDto,
     @UploadedFiles(
       new ParseFilePipeBuilder()
@@ -78,7 +78,7 @@ export class RecipeController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
   @Get('my-recipes')
-  async getMyRecipes(@Req() req) {
+  async getMyRecipes(@Req() req: Request & { user: { sub: string } }) {
     return this.recipeService.getRecipesByAuthor(req.user.sub);
   }
 
@@ -101,7 +101,7 @@ export class RecipeController {
   async deleteRecipe(
     @Param('id', ParseObjectIdPipe) id: string,
     @Req()
-    req,
+    req: Request & { user: { sub: string; role: string } },
   ) {
     return this.recipeService.deleteRecipe(id, req.user.sub, req.user.role);
   }
@@ -113,7 +113,7 @@ export class RecipeController {
   async updateRecipe(
     @Param('id', ParseObjectIdPipe) id: string,
     @Body() dto: UpdateRecipeDto,
-    @Req() req,
+    @Req() req: Request & { user: { sub: string } },
     @UploadedFiles(
       new ParseFilePipeBuilder()
         .addFileTypeValidator({

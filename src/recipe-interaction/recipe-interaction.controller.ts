@@ -16,7 +16,7 @@ export class RecipeInteractionController {
   @Post('/save/:recipeId')
   toggleSave(
     @Param('recipeId', ParseObjectIdPipe) recipeId: string,
-    @Req() req,
+    @Req() req: Request & { user: { sub: string } },
   ) {
     return this.recipeInteractionService.toggleSave(req.user.sub, recipeId);
   }
@@ -26,7 +26,7 @@ export class RecipeInteractionController {
   @Post('/love/:recipeId')
   toggleLove(
     @Param('recipeId', ParseObjectIdPipe) recipeId: string,
-    @Req() req,
+    @Req() req: Request & { user: { sub: string } },
   ) {
     return this.recipeInteractionService.toggleLove(req.user.sub, recipeId);
   }
@@ -34,21 +34,21 @@ export class RecipeInteractionController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.User)
   @Get('/saved')
-  getSavedRecipes(@Req() req) {
+  getSavedRecipes(@Req() req: Request & { user: { sub: string } }) {
     return this.recipeInteractionService.getSavedRecipes(req.user.sub);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.User)
   @Get('/loved')
-  getLovedRecipes(@Req() req) {
+  getLovedRecipes(@Req() req: Request & { user: { sub: string } }) {
     return this.recipeInteractionService.getLovedRecipes(req.user.sub);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
   @Get('/analytics/chef')
-  getChefAnalytics(@Req() req) {
+  getChefAnalytics(@Req() req: Request & { user: { sub: string } }) {
     return this.recipeInteractionService.getChefAnalytics(req.user.sub);
   }
 
@@ -64,7 +64,7 @@ export class RecipeInteractionController {
   @Get('/stats/:recipeId')
   getRecipeStats(
     @Param('recipeId', ParseObjectIdPipe) recipeId: string,
-    @Req() req,
+    @Req() req: Request & { user: { sub: string } },
   ) {
     return this.recipeInteractionService.getInteractionStatus(
       req.user.sub,

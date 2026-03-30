@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Injectable } from '@nestjs/common';
 import { Model, PipelineStage, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
