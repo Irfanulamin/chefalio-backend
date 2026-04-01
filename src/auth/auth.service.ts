@@ -42,9 +42,9 @@ export class AuthService {
 
     res.cookie('access_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 3600000, // 1 hour
+      secure: true, // MUST be true when sameSite is 'none'
+      sameSite: 'none', // Changed from 'lax' to allow cross-origin
+      maxAge: 3600000,
     });
 
     return {
@@ -81,9 +81,9 @@ export class AuthService {
 
     res.cookie('access_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 3600000, // 1 hour
+      secure: true, // MUST be true when sameSite is 'none'
+      sameSite: 'none', // Changed from 'lax' to allow cross-origin
+      maxAge: 3600000,
     });
 
     return {
