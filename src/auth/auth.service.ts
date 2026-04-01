@@ -51,6 +51,7 @@ export class AuthService {
       success: true,
       statusCode: 200,
       message: 'User registered successfully',
+      role: user.role,
     };
   }
 
@@ -89,6 +90,7 @@ export class AuthService {
       success: true,
       statusCode: 200,
       message: 'Login successful',
+      role: user.role,
     };
   }
 

@@ -45,7 +45,7 @@ export class UserService {
   async userDetails(userId: string) {
     const userDetails = await this.userModel
       .findById(userId)
-      .select('-password -__v -_id -createdAt -updatedAt');
+      .select('-password -__v -_id -createdAt -updatedAt -isActive -role');
     return userDetails;
   }
 
