@@ -15,6 +15,15 @@ export class RecipeInteractionService {
     const uid = new Types.ObjectId(userId);
     const rid = new Types.ObjectId(recipeId);
 
+    const recipeExists = await this.recipeModel.exists({ _id: rid });
+    if (!recipeExists) {
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'Recipe not found',
+      };
+    }
+
     const now = new Date();
     const previous = await this.interactionModel.findOneAndUpdate(
       { userId: uid, recipeId: rid },
@@ -53,6 +62,15 @@ export class RecipeInteractionService {
   async toggleLove(userId: string, recipeId: string) {
     const uid = new Types.ObjectId(userId);
     const rid = new Types.ObjectId(recipeId);
+
+    const recipeExists = await this.recipeModel.exists({ _id: rid });
+    if (!recipeExists) {
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'Recipe not found',
+      };
+    }
 
     const now = new Date();
     const previous = await this.interactionModel.findOneAndUpdate(
