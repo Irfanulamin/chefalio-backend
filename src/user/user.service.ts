@@ -45,7 +45,7 @@ export class UserService {
   async userDetails(userId: string) {
     const userDetails = await this.userModel
       .findById(userId)
-      .select('-password -__v -_id -createdAt -updatedAt -isActive -role');
+      .select('-password -__v -_id -createdAt -updatedAt -isActive');
     return userDetails;
   }
 
@@ -114,16 +114,24 @@ export class UserService {
 
     const updateData: UpdateQuery<User> | undefined = { ...dto };
 
-    if (dto.fullName) {
-      await this.recipeService.syncAuthorFullName(userId, dto.fullName);
-    }
-
     // Upload only if image exists
     if (image) {
       const uploadedImageUrl = await this.cloudinaryService.uploadImage(image);
       updateData.profile_url = uploadedImageUrl;
     }
 
+    if (dto.fullName) {
+      await this.recipeService.syncAuthorFullName(userId, dto.fullName);
+    }
+
+    const profileUrl =
+      typeof updateData.profile_url === 'string'
+        ? updateData.profile_url
+        : undefined;
+
+    if (profileUrl) {
+      await this.recipeService.syncAuthorProfileImage(userId, profileUrl);
+    }
     const updatedUser = await this.userModel
       .findByIdAndUpdate(userId, updateData, { new: true })
       .select('-password -__v -createdAt -updatedAt');

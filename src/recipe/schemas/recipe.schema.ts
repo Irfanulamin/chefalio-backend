@@ -6,10 +6,10 @@ export type RecipeDocument = Recipe & Document;
 @Schema({ timestamps: true })
 export class Recipe {
   @Prop({ required: true, index: true })
-  title: string;
+  title!: string;
 
   @Prop({ required: true })
-  description: string;
+  description!: string;
 
   @Prop({
     type: {
@@ -17,21 +17,23 @@ export class Recipe {
       username: { type: String, required: true },
       email: { type: String, required: true },
       userId: { type: Types.ObjectId, required: true },
+      image: { type: String, required: true },
     },
     required: true,
   })
-  author: {
+  author!: {
     userId: Types.ObjectId;
     fullName: string;
     username: string;
     email: string;
+    image: string;
   };
 
   @Prop({ type: [String], required: true, index: true })
-  ingredients: string[];
+  ingredients!: string[];
 
   @Prop({ type: [String], index: true })
-  tags: string[];
+  tags!: string[];
 
   @Prop({
     type: [
@@ -42,13 +44,13 @@ export class Recipe {
     ],
     required: true,
   })
-  instructions: {
+  instructions!: {
     step: number;
     instruction: string;
   }[];
 
   @Prop({ index: true, enum: ['beginner', 'intermediate', 'advance'] })
-  difficulty: 'beginner' | 'intermediate' | 'advance';
+  difficulty!: 'beginner' | 'intermediate' | 'advance';
 
   @Prop({
     type: [String],
@@ -58,13 +60,13 @@ export class Recipe {
       'Recipe must contain exactly 3 images',
     ],
   })
-  images: string[];
+  images!: string[];
 
   @Prop({ default: 0 })
-  lovedCount: number;
+  lovedCount!: number;
 
   @Prop({ default: 0 })
-  savedCount: number;
+  savedCount!: number;
 }
 
 export const RecipeSchema = SchemaFactory.createForClass(Recipe);

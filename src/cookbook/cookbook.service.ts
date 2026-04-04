@@ -38,6 +38,7 @@ export class CookbookService {
         fullName: user.fullName,
         username: user.username,
         email: user.email,
+        image: user.profile_url,
       },
     });
     return {

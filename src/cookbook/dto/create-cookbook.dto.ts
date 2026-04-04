@@ -1,22 +1,22 @@
+import { Type } from 'class-transformer';
 import { IsString, IsNotEmpty, IsNumber, Min } from 'class-validator';
 
 export class CreateCookbookDto {
   @IsNotEmpty()
   @IsString()
-  title: string;
+  title!: string;
 
   @IsNotEmpty()
   @IsString()
-  description: string;
+  description!: string;
 
-  @IsNotEmpty({ message: 'Image file is required' })
-  image: Express.Multer.File;
-
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
-  price: number;
+  price!: number;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
-  stockCount: number;
+  stockCount!: number;
 }

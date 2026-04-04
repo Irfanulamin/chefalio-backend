@@ -6,10 +6,10 @@ export type CookbookDocument = Cookbook & Document;
 @Schema({ timestamps: true })
 export class Cookbook {
   @Prop({ required: true, index: true })
-  title: string;
+  title!: string;
 
   @Prop({ required: true })
-  description: string;
+  description!: string;
 
   @Prop({
     type: {
@@ -17,27 +17,29 @@ export class Cookbook {
       username: { type: String, required: true },
       email: { type: String, required: true },
       userId: { type: Types.ObjectId, required: true },
+      image: { type: String, required: true },
     },
     required: true,
   })
-  author: {
+  author!: {
     userId: Types.ObjectId;
     fullName: string;
     username: string;
     email: string;
+    image: string;
   };
 
   @Prop({
     type: String,
     required: true,
   })
-  cookbook_image: string;
+  cookbook_image!: string;
 
   @Prop({ type: Number, required: true, min: 0, default: 0, index: true })
-  price: number;
+  price!: number;
 
   @Prop({ required: true, min: 0 })
-  stockCount: number;
+  stockCount!: number;
 }
 
 export const CookbookSchema = SchemaFactory.createForClass(Cookbook);

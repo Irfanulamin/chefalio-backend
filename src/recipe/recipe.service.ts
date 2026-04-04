@@ -47,6 +47,7 @@ export class RecipeService {
         fullName: user.fullName,
         username: user.username,
         email: user.email,
+        image: user.profile_url,
       },
     });
 
@@ -219,9 +220,24 @@ export class RecipeService {
   }
 
   async syncAuthorFullName(userId: string, newFullName: string) {
+    const setPayload: Record<string, string> = {
+      'author.fullName': newFullName,
+    };
+
     await this.recipeModel.updateMany(
       { 'author.userId': new Types.ObjectId(userId) },
-      { $set: { 'author.fullName': newFullName } },
+      { $set: setPayload },
+    );
+  }
+
+  async syncAuthorProfileImage(userId: string, newProfileUrl: string) {
+    const setPayload: Record<string, string> = {
+      'author.image': newProfileUrl,
+    };
+
+    await this.recipeModel.updateMany(
+      { 'author.userId': new Types.ObjectId(userId) },
+      { $set: setPayload },
     );
   }
 
