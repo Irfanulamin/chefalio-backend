@@ -1,38 +1,35 @@
-import { IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsDefined, IsEmail, IsString, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class BillingAddressDto {
-  @IsOptional()
   @IsString()
-  name: string;
+  name!: string;
 
-  @IsOptional()
   @IsString()
-  address: string;
+  address!: string;
 
-  @IsOptional()
   @IsString()
-  city: string;
+  city!: string;
 
-  @IsOptional()
   @IsString()
-  state: string;
+  state!: string;
 
-  @IsOptional()
   @IsString()
-  postalCode: string;
+  postalCode!: string;
 
-  @IsOptional()
   @IsString()
-  country: string;
+  country!: string;
 }
 
 export class CreateCookbookPurchaseDto {
   @IsString()
-  cookbookId: string;
+  cookbookId!: string;
 
   @IsEmail()
-  receiptEmail: string;
+  receiptEmail!: string;
 
-  @IsOptional()
-  billingAddress: BillingAddressDto;
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => BillingAddressDto)
+  billingAddress!: BillingAddressDto;
 }

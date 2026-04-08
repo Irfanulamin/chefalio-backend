@@ -38,13 +38,15 @@ export class CookbookPurchaseController {
     @Body() dto: CreateCookbookPurchaseDto,
   ) {
     const userId = req.user.sub;
-
     return this.cookbookPurchaseService.createCheckoutSession(userId, dto);
   }
 
   @Post('webhook')
   async handleStripeWebhook(@Req() req: RawBodyRequest<Request>) {
     const sig = req.headers['stripe-signature'] as string;
+    console.log('sig:', sig);
+    console.log('rawBody exists:', !!req.rawBody);
+
     if (!req.rawBody) return { received: false };
 
     let event: Stripe.Event;
@@ -55,8 +57,9 @@ export class CookbookPurchaseController {
         this.config.getOrThrow('STRIPE_WEBHOOK_SECRET'),
       );
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
       throw new BadRequestException(
-        `Webhook signature verification failed: ${err.message}`,
+        `Webhook signature verification failed: ${errorMessage}`,
       );
     }
 
@@ -64,10 +67,10 @@ export class CookbookPurchaseController {
       try {
         await this.cookbookPurchaseService.confirmPayment(event.data.object);
       } catch (err) {
-        // log but still return 200 so Stripe doesn't retry
-        console.error('confirmPayment failed:', err);
+        console.error(' confirmPayment failed:', err);
       }
     }
+
     return { received: true };
   }
 

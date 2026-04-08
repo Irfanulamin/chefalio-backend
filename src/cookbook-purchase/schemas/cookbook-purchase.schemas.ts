@@ -11,7 +11,7 @@ export class CookbookPurchase {
     required: true,
     index: true,
   })
-  cookbookId: Types.ObjectId;
+  cookbookId!: Types.ObjectId;
 
   @Prop({
     type: Types.ObjectId,
@@ -19,42 +19,32 @@ export class CookbookPurchase {
     required: true,
     index: true,
   })
-  buyerId: Types.ObjectId;
+  buyerId!: Types.ObjectId;
 
   @Prop({ required: true })
-  cookbookTitle: string;
+  cookbookTitle!: string;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
-  chefId: Types.ObjectId;
+  chefId!: Types.ObjectId;
 
   @Prop({ required: true })
-  cookbookImage: string;
+  cookbookImage!: string;
 
   @Prop({ required: true })
-  price: number;
+  price!: number;
 
   @Prop({ required: true, index: true })
-  stripeSessionId: string;
+  stripeSessionId!: string;
 
   @Prop({
     enum: ['pending', 'paid', 'failed', 'refunded', 'shipped', 'delivered'],
     default: 'pending',
     index: true,
   })
-  paymentStatus: string;
+  paymentStatus!: string;
 
-  @Prop({
-    type: {
-      name: { type: String },
-      line1: { type: String },
-      line2: { type: String },
-      city: { type: String },
-      state: { type: String },
-      postalCode: { type: String },
-      country: { type: String },
-    },
-  })
-  billingAddress: {
+  @Prop({ type: Object })
+  billingAddress!: {
     name: string;
     address: string;
     city: string;
@@ -62,9 +52,8 @@ export class CookbookPurchase {
     postalCode: string;
     country: string;
   };
-
   @Prop()
-  receiptEmail: string;
+  receiptEmail!: string;
 }
 
 export const CookbookPurchaseSchema =

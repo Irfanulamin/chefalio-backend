@@ -50,44 +50,31 @@ export class CookbookPurchaseService {
     const session = await this.stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
+      customer_email: dto.receiptEmail,
 
       line_items: [
         {
           price_data: {
             currency: 'usd',
-
             product_data: {
               name: cookbook.title,
               images: [cookbook.cookbook_image],
             },
-
-            unit_amount: cookbook.price * 100,
+            unit_amount: Math.round(cookbook.price * 100),
           },
           quantity: 1,
         },
       ],
 
-      success_url: `${process.env.FRONTEND_URL}/payment-success`,
-      cancel_url: `${process.env.FRONTEND_URL}/payment-cancel`,
+      success_url: `${process.env.ALLOWED_ORIGIN}/payment-success`,
+      cancel_url: `${process.env.ALLOWED_ORIGIN}/payment-cancel`,
 
       metadata: {
         cookbookId: dto.cookbookId,
         buyerId: userId,
         receiptEmail: dto.receiptEmail,
+        billingAddress: JSON.stringify(dto.billingAddress ?? {}), // 👈
       },
-    });
-
-    await this.purchaseModel.create({
-      cookbookId: new Types.ObjectId(dto.cookbookId),
-      buyerId: new Types.ObjectId(userId),
-      chefId: new Types.ObjectId(cookbook.author.userId),
-      cookbookTitle: cookbook.title,
-      cookbookImage: cookbook.cookbook_image,
-      price: cookbook.price,
-      stripeSessionId: session.id,
-      paymentStatus: 'pending',
-      billingAddress: dto.billingAddress,
-      receiptEmail: dto.receiptEmail,
     });
 
     return {
@@ -280,22 +267,42 @@ export class CookbookPurchaseService {
   }
 
   async confirmPayment(session: Stripe.Checkout.Session): Promise<void> {
-    const purchase = await this.purchaseModel.findOneAndUpdate(
-      { stripeSessionId: session.id },
-      { paymentStatus: 'paid' },
-      { new: true },
-    );
-    if (!purchase) return;
+    if (session.payment_status !== 'paid') {
+      return;
+    }
 
-    await this.cookbookModel.findOneAndUpdate(
-      { _id: purchase.cookbookId, stockCount: { $gt: 0 } },
-      { $inc: { stockCount: -1 } },
-    );
+    const existing = await this.purchaseModel.findOne({
+      stripeSessionId: session.id,
+    });
+    if (existing) {
+      return;
+    }
 
-    await this.mailService.sendPurchaseReceipt(purchase.receiptEmail, {
-      cookbookTitle: purchase.cookbookTitle,
-      cookbookImage: purchase.cookbookImage,
-      price: purchase.price,
+    const { cookbookId, buyerId, receiptEmail, billingAddress } =
+      session.metadata as Record<string, string>;
+
+    console.log({ cookbookId, buyerId, receiptEmail, billingAddress });
+
+    const cookbook = await this.cookbookModel.findById(cookbookId);
+    if (!cookbook) return;
+
+    await this.purchaseModel.create({
+      cookbookId: new Types.ObjectId(cookbookId),
+      buyerId: new Types.ObjectId(buyerId),
+      chefId: new Types.ObjectId(cookbook.author.userId),
+      cookbookTitle: cookbook.title,
+      cookbookImage: cookbook.cookbook_image,
+      price: cookbook.price,
+      stripeSessionId: session.id,
+      paymentStatus: 'paid',
+      billingAddress: JSON.parse(billingAddress || '{}'),
+      receiptEmail,
+    });
+
+    await this.mailService.sendPurchaseReceipt(receiptEmail, {
+      cookbookTitle: cookbook.title,
+      cookbookImage: cookbook.cookbook_image,
+      price: cookbook.price,
       purchaseDate: new Date(),
     });
   }

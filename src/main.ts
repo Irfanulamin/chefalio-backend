@@ -49,3 +49,26 @@ export default async function handler(req: Request, res: Response) {
   }
   server(req, res);
 }
+
+// async function bootstrap() {
+//   const app = await NestFactory.create(AppModule, { rawBody: true });
+
+//   app.use(cookieParser());
+
+//   app.useGlobalPipes(
+//     new ValidationPipe({
+//       whitelist: true,
+//       forbidNonWhitelisted: true,
+//       transform: true,
+//       forbidUnknownValues: true,
+//     }),
+//   );
+
+//   app.enableCors({
+//     origin: 'http://localhost:3000',
+//     credentials: true,
+//   });
+
+//   await app.listen(5000);
+// }
+// bootstrap();

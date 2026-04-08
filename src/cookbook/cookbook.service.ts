@@ -58,9 +58,14 @@ export class CookbookService {
       ];
     }
     if (author) {
-      query['author.userId'] = author;
+      query['author.username'] = author;
     }
-    const data = await this.cookbookModel.find(query).skip(skip).limit(limit);
+    const data = await this.cookbookModel
+      .find(query)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .select('-__v -updatedAt -createdAt');
     const total = await this.cookbookModel.countDocuments(query);
     return {
       success: true,
@@ -70,6 +75,7 @@ export class CookbookService {
         total,
         page,
         limit,
+        totalPages: Math.ceil(total / limit),
       },
     };
   }
@@ -139,6 +145,17 @@ export class CookbookService {
     return {
       success: true,
       message: 'Cookbook removed successfully',
+    };
+  }
+
+  async findOtherCookbooks(excludeId: string, limit: number) {
+    const cookbooks = await this.cookbookModel
+      .find({ _id: { $ne: excludeId } })
+      .limit(limit);
+    return {
+      success: true,
+      message: 'Other cookbooks retrieved successfully',
+      data: cookbooks,
     };
   }
 }
