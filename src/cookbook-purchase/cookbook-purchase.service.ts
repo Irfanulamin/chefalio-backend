@@ -80,13 +80,16 @@ export class CookbookPurchaseService {
     return {
       success: true,
       message: 'Checkout session created successfully',
-      data: session.url,
+      redirectUrl: session.url,
     };
   }
 
   async getUserPurchases(userId: string) {
     const query = { buyerId: new Types.ObjectId(userId) };
-    const data = await this.purchaseModel.find(query).sort({ createdAt: -1 });
+    const data = await this.purchaseModel
+      .find(query)
+      .sort({ createdAt: -1 })
+      .select('-__v -updatedAt');
     return {
       success: true,
       message: 'Purchases retrieved successfully',
@@ -97,7 +100,8 @@ export class CookbookPurchaseService {
   async getChefOrders(chefId: string) {
     const data = await this.purchaseModel
       .find({ chefId: new Types.ObjectId(chefId) })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .select('-__v -updatedAt');
     return { success: true, message: 'Orders retrieved', data };
   }
 
@@ -285,6 +289,8 @@ export class CookbookPurchaseService {
 
     const cookbook = await this.cookbookModel.findById(cookbookId);
     if (!cookbook) return;
+    cookbook.stockCount = Math.max(cookbook.stockCount - 1, 0);
+    await cookbook.save();
 
     await this.purchaseModel.create({
       cookbookId: new Types.ObjectId(cookbookId),

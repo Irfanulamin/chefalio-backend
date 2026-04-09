@@ -50,23 +50,31 @@ export class CookbookService {
 
   async findAll(page: number, limit: number, search: string, author: string) {
     const skip = (page - 1) * limit;
-    const query: Record<string, any> = {};
+
+    const query: Record<string, any> = {
+      stockCount: { $gt: 0 },
+    };
+
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
       ];
     }
+
     if (author) {
       query['author.username'] = author;
     }
+
     const data = await this.cookbookModel
       .find(query)
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 })
       .select('-__v -updatedAt -createdAt');
+
     const total = await this.cookbookModel.countDocuments(query);
+
     return {
       success: true,
       message: 'Cookbooks retrieved successfully',

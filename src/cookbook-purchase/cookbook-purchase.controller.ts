@@ -75,7 +75,7 @@ export class CookbookPurchaseController {
   }
 
   @UseGuards(AuthGuard)
-  @Get('my-purchases')
+  @Get('history')
   async getMyPurchases(@Req() req: Request & { user: { sub: string } }) {
     const userId = req.user.sub;
     return this.cookbookPurchaseService.getUserPurchases(userId);
