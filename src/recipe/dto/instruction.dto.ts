@@ -9,11 +9,11 @@ import {
 export class InstructionDto {
   @IsNotEmpty()
   @IsNumber()
-  step: number;
+  step!: number;
 
   @IsNotEmpty()
   @IsString()
   @MinLength(5)
   @MaxLength(500)
-  instruction: string;
+  instruction!: string;
 }
