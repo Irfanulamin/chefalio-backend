@@ -1,4 +1,3 @@
-// src/types/express.d.ts
 declare namespace Express {
   interface User {
     sub: string;
