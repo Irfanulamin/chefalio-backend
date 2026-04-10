@@ -52,8 +52,6 @@ export class CookbookService {
   async findAll(page: number, limit: number, search: string, author: string) {
     const query: Record<string, any> = { stockCount: { $gt: 0 } };
 
-    if (search) query.$text = { $search: search };
-
     if (author) {
       const authorUsers = await this.userModel
         .find({ fullName: { $regex: author, $options: 'i' } })
@@ -70,13 +68,31 @@ export class CookbookService {
       query.authorId = { $in: authorUsers.map((u) => u._id) };
     }
 
+    if (search) {
+      const textCount = await this.cookbookModel.countDocuments({
+        ...query,
+        $text: { $search: search },
+      });
+
+      if (textCount > 0) {
+        query.$text = { $search: search };
+      } else {
+        const searchRegex = { $regex: search, $options: 'i' };
+        query.$or = [{ title: searchRegex }, { description: searchRegex }];
+      }
+    }
+
+    const isTextSearch = !!query.$text;
+
     const [data, total] = await Promise.all([
       this.cookbookModel
-        .find(query, search ? { score: { $meta: 'textScore' } } : {})
+        .find(query, isTextSearch ? { score: { $meta: 'textScore' } } : {})
         .populate('authorId', 'fullName username email profile_url')
         .skip((page - 1) * limit)
         .limit(limit)
-        .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
+        .sort(
+          isTextSearch ? { score: { $meta: 'textScore' } } : { createdAt: -1 },
+        )
         .select('-__v -updatedAt -createdAt'),
       this.cookbookModel.countDocuments(query),
     ]);

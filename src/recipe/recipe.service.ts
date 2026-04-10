@@ -64,10 +64,6 @@ export class RecipeService {
   ) {
     const filter: Record<string, any> = {};
 
-    if (search) {
-      filter.$text = { $search: search };
-    }
-
     if (tags) {
       const tagsArray = tags.split(',').map((tag) => tag.trim());
       filter.tags = {
@@ -96,6 +92,31 @@ export class RecipeService {
         };
       }
       filter.authorId = authorUser._id;
+    }
+
+    if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+      const regexFilter = {
+        $or: [
+          { title: searchRegex },
+          { description: searchRegex },
+          { tags: searchRegex },
+          { ingredients: searchRegex },
+        ],
+      };
+
+      // Try $text first (uses your index, fast)
+      const textCount = await this.recipeModel.countDocuments({
+        $text: { $search: search },
+        ...filter,
+      });
+
+      if (textCount > 0) {
+        filter.$text = { $search: search };
+      } else {
+        // Partial match fallback
+        Object.assign(filter, regexFilter);
+      }
     }
 
     const [recipes, total] = await Promise.all([
