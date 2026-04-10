@@ -52,47 +52,26 @@ export class CookbookService {
   async findAll(page: number, limit: number, search: string, author: string) {
     const query: Record<string, any> = { stockCount: { $gt: 0 } };
 
+    if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+      query.$or = [{ title: searchRegex }, { description: searchRegex }];
+    }
+
     if (author) {
       const authorUsers = await this.userModel
         .find({ fullName: { $regex: author, $options: 'i' } })
         .select('_id');
-
-      if (!authorUsers.length)
-        return {
-          success: true,
-          message: 'Cookbooks retrieved successfully',
-          data: [],
-          pagination: { total: 0, page, limit, totalPages: 0 },
-        };
-
+      if (!authorUsers.length) return this.emptyCookbookResponse(page, limit);
       query.authorId = { $in: authorUsers.map((u) => u._id) };
     }
 
-    if (search) {
-      const textCount = await this.cookbookModel.countDocuments({
-        ...query,
-        $text: { $search: search },
-      });
-
-      if (textCount > 0) {
-        query.$text = { $search: search };
-      } else {
-        const searchRegex = { $regex: search, $options: 'i' };
-        query.$or = [{ title: searchRegex }, { description: searchRegex }];
-      }
-    }
-
-    const isTextSearch = !!query.$text;
-
     const [data, total] = await Promise.all([
       this.cookbookModel
-        .find(query, isTextSearch ? { score: { $meta: 'textScore' } } : {})
+        .find(query)
         .populate('authorId', 'fullName username email profile_url')
         .skip((page - 1) * limit)
         .limit(limit)
-        .sort(
-          isTextSearch ? { score: { $meta: 'textScore' } } : { createdAt: -1 },
-        )
+        .sort({ createdAt: -1 })
         .select('-__v -updatedAt -createdAt'),
       this.cookbookModel.countDocuments(query),
     ]);
@@ -102,6 +81,15 @@ export class CookbookService {
       message: 'Cookbooks retrieved successfully',
       data,
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  private emptyCookbookResponse(page: number, limit: number) {
+    return {
+      success: true,
+      message: 'Cookbooks retrieved successfully',
+      data: [],
+      pagination: { total: 0, page, limit, totalPages: 0 },
     };
   }
 

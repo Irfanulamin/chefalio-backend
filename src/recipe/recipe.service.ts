@@ -55,30 +55,35 @@ export class RecipeService {
   }
 
   async getAllRecipes(
-    page: number = 1,
-    limit: number = 10,
-    search: string = '',
-    tags: string = '',
-    difficulty: string = '',
-    author: string = '',
+    page: number,
+    limit: number,
+    search: string,
+    tags: string,
+    difficulty: string,
+    author: string,
   ) {
     const filter: Record<string, any> = {};
 
+    if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+      filter.$or = [
+        { title: searchRegex },
+        { description: searchRegex },
+        { tags: searchRegex },
+        { ingredients: searchRegex },
+      ];
+    }
+
     if (tags) {
-      const tagsArray = tags.split(',').map((tag) => tag.trim());
-      filter.tags = {
-        $in: tagsArray.map((t) => t.toLowerCase()),
-      };
+      const tagsArray = tags.split(',').map((t) => t.trim().toLowerCase());
+      filter.tags = { $in: tagsArray };
     }
 
-    if (difficulty) {
-      filter.difficulty = difficulty;
-    }
+    if (difficulty) filter.difficulty = difficulty;
 
-    // If filtering by author username, resolve to userId first
     if (author) {
       const authorUser = await this.userModel
-        .findOne({ username: { $regex: author, $options: 'i' } }) // ← partial match
+        .findOne({ username: { $regex: author, $options: 'i' } })
         .select('_id');
       if (!authorUser) {
         return {
@@ -87,45 +92,25 @@ export class RecipeService {
           message: 'Recipes retrieved successfully',
           data: {
             recipes: [],
-            pagination: { total: 0, page, limit, totalPages: 0 },
+            pagination: {
+              total: 0,
+              page,
+              limit,
+              totalPages: 0,
+            },
           },
         };
       }
       filter.authorId = authorUser._id;
     }
 
-    if (search) {
-      const searchRegex = { $regex: search, $options: 'i' };
-      const regexFilter = {
-        $or: [
-          { title: searchRegex },
-          { description: searchRegex },
-          { tags: searchRegex },
-          { ingredients: searchRegex },
-        ],
-      };
-
-      // Try $text first (uses your index, fast)
-      const textCount = await this.recipeModel.countDocuments({
-        $text: { $search: search },
-        ...filter,
-      });
-
-      if (textCount > 0) {
-        filter.$text = { $search: search };
-      } else {
-        // Partial match fallback
-        Object.assign(filter, regexFilter);
-      }
-    }
-
     const [recipes, total] = await Promise.all([
       this.recipeModel
-        .find(filter, search ? { score: { $meta: 'textScore' } } : {})
+        .find(filter)
         .populate('authorId', 'fullName username email profile_url')
         .skip((page - 1) * limit)
         .limit(limit)
-        .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 }),
+        .sort({ createdAt: -1 }),
       this.recipeModel.countDocuments(filter),
     ]);
 

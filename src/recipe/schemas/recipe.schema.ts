@@ -60,9 +60,13 @@ export class Recipe {
 
 export const RecipeSchema = SchemaFactory.createForClass(Recipe);
 
+// DELETE these from both schemas:
 RecipeSchema.index({
   title: 'text',
   description: 'text',
   ingredients: 'text',
   tags: 'text',
 });
+
+// ADD these instead for regex performance on the fields you search:
+RecipeSchema.index({ title: 1 });
