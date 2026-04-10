@@ -14,15 +14,14 @@ import { AdminUpdateUserDto } from './dto/AdminUpdateUser.dto';
 import { CreateUserDto } from './dto/CreateUser.dto';
 import { Types } from 'mongoose';
 import { CloudinaryService } from '../services/cloudinary.service';
-import { RecipeService } from '../recipe/recipe.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private readonly cloudinaryService: CloudinaryService,
-    private readonly recipeService: RecipeService,
   ) {}
+
   async createUser(registerUserDto: RegisterUserDto) {
     try {
       return await this.userModel.create(registerUserDto);
@@ -114,24 +113,11 @@ export class UserService {
 
     const updateData: UpdateQuery<User> | undefined = { ...dto };
 
-    // Upload only if image exists
     if (image) {
       const uploadedImageUrl = await this.cloudinaryService.uploadImage(image);
       updateData.profile_url = uploadedImageUrl;
     }
 
-    if (dto.fullName) {
-      await this.recipeService.syncAuthorFullName(userId, dto.fullName);
-    }
-
-    const profileUrl =
-      typeof updateData.profile_url === 'string'
-        ? updateData.profile_url
-        : undefined;
-
-    if (profileUrl) {
-      await this.recipeService.syncAuthorProfileImage(userId, profileUrl);
-    }
     const updatedUser = await this.userModel
       .findByIdAndUpdate(userId, updateData, { new: true })
       .select('-password -__v -createdAt -updatedAt');
@@ -243,5 +229,9 @@ export class UserService {
         })),
       },
     };
+  }
+
+  async updateMany(filter: any, update: any) {
+    return this.userModel.updateMany(filter, update);
   }
 }

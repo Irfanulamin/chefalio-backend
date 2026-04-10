@@ -19,6 +19,7 @@ export class RecipeService {
     @InjectModel(Recipe.name) private recipeModel: Model<Recipe>,
     private readonly cloudinaryService: CloudinaryService,
   ) {}
+
   async createRecipe(
     userId: string,
     dto: CreateRecipeDto,
@@ -42,13 +43,7 @@ export class RecipeService {
     const recipe = await this.recipeModel.create({
       ...dto,
       images: imageUrls,
-      author: {
-        userId: user._id,
-        fullName: user.fullName,
-        username: user.username,
-        email: user.email,
-        image: user.profile_url,
-      },
+      authorId: user._id,
     });
 
     return {
@@ -78,24 +73,43 @@ export class RecipeService {
 
     if (tags) {
       const tagsArray = tags.split(',').map((tag) => tag.trim());
-      filter.tags = { $in: tagsArray };
+      filter.tags = {
+        $in: tagsArray.map((t) => t.toLowerCase()),
+      };
     }
 
     if (difficulty) {
       filter.difficulty = difficulty;
     }
 
+    // If filtering by author username, resolve to userId first
     if (author) {
-      filter['author.username'] = author;
+      const authorUser = await this.userModel
+        .findOne({ username: author })
+        .select('_id');
+      if (!authorUser) {
+        return {
+          success: true,
+          statusCode: 200,
+          message: 'Recipes retrieved successfully',
+          data: {
+            recipes: [],
+            pagination: { total: 0, page, limit, totalPages: 0 },
+          },
+        };
+      }
+      filter.authorId = authorUser._id;
     }
 
-    const recipes = await this.recipeModel
-      .find(filter)
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .sort({ createdAt: -1 });
-
-    const total = await this.recipeModel.countDocuments(filter);
+    const [recipes, total] = await Promise.all([
+      this.recipeModel
+        .find(filter)
+        .populate('authorId', 'fullName username email profile_url')
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .sort({ createdAt: -1 }),
+      this.recipeModel.countDocuments(filter),
+    ]);
 
     return {
       success: true,
@@ -114,7 +128,9 @@ export class RecipeService {
   }
 
   async getRecipeById(id: string) {
-    const recipe = await this.recipeModel.findById(id);
+    const recipe = await this.recipeModel
+      .findById(id)
+      .populate('authorId', 'fullName username email profile_url');
     if (!recipe) {
       throw new NotFoundException('Recipe not found');
     }
@@ -131,7 +147,7 @@ export class RecipeService {
 
     if (!recipe) throw new NotFoundException('Recipe not found');
 
-    if (role !== 'admin' && recipe.author.userId.toString() !== userId) {
+    if (role !== 'admin' && recipe.authorId.toString() !== userId) {
       throw new ForbiddenException('You do not own this recipe');
     }
 
@@ -149,7 +165,7 @@ export class RecipeService {
     if (!recipe) {
       throw new NotFoundException('Recipe not found');
     }
-    if (recipe.author.userId.toString() !== userId) {
+    if (recipe.authorId.toString() !== userId) {
       throw new BadRequestException('You are not the author of this recipe');
     }
 
@@ -201,15 +217,18 @@ export class RecipeService {
       recipe.images.push(...imageUrls);
     }
 
-    // STEP 5: Persist everything
-    const updated = await this.recipeModel.findByIdAndUpdate(
-      id,
-      {
-        ...updateRecipeDto,
-        images: recipe.images,
-      },
-      { new: true },
-    );
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { removeImages: _removed, ...fieldsToUpdate } = updateRecipeDto;
+    const updated = await this.recipeModel
+      .findByIdAndUpdate(
+        id,
+        {
+          ...fieldsToUpdate,
+          images: recipe.images,
+        },
+        { new: true },
+      )
+      .populate('authorId', 'fullName username email profile_url');
 
     return {
       success: true,
@@ -219,31 +238,10 @@ export class RecipeService {
     };
   }
 
-  async syncAuthorFullName(userId: string, newFullName: string) {
-    const setPayload: Record<string, string> = {
-      'author.fullName': newFullName,
-    };
-
-    await this.recipeModel.updateMany(
-      { 'author.userId': new Types.ObjectId(userId) },
-      { $set: setPayload },
-    );
-  }
-
-  async syncAuthorProfileImage(userId: string, newProfileUrl: string) {
-    const setPayload: Record<string, string> = {
-      'author.image': newProfileUrl,
-    };
-
-    await this.recipeModel.updateMany(
-      { 'author.userId': new Types.ObjectId(userId) },
-      { $set: setPayload },
-    );
-  }
-
   async getRecipesByAuthor(userId: string) {
     const recipes = await this.recipeModel
-      .find({ 'author.userId': new Types.ObjectId(userId) })
+      .find({ authorId: new Types.ObjectId(userId) })
+      .populate('authorId', 'fullName username email profile_url')
       .sort({ createdAt: -1 });
     return {
       success: true,
@@ -276,14 +274,29 @@ export class RecipeService {
       this.recipeModel.aggregate([
         {
           $group: {
-            _id: '$author.userId',
-            fullName: { $first: '$author.fullName' },
-            username: { $first: '$author.username' },
+            _id: '$authorId',
             count: { $sum: 1 },
           },
         },
         { $sort: { count: -1 } },
         { $limit: 3 },
+        {
+          $lookup: {
+            from: 'users',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'authorInfo',
+          },
+        },
+        { $unwind: '$authorInfo' },
+        {
+          $project: {
+            userId: '$_id',
+            fullName: '$authorInfo.fullName',
+            username: '$authorInfo.username',
+            count: 1,
+          },
+        },
       ]),
     ]);
 
@@ -298,14 +311,7 @@ export class RecipeService {
           count,
         })),
         topTags: topTags.map(({ _id, count }) => ({ tag: _id, count })),
-        top3MostUploadedAuthors: top3MostUploadedAuthors.map(
-          ({ _id, fullName, username, count }) => ({
-            userId: _id,
-            fullName,
-            username,
-            count,
-          }),
-        ),
+        top3MostUploadedAuthors,
       },
     };
   }

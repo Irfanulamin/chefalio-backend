@@ -11,28 +11,17 @@ export class Recipe {
   @Prop({ required: true })
   description!: string;
 
-  @Prop({
-    type: {
-      fullName: { type: String, required: true, index: true },
-      username: { type: String, required: true },
-      email: { type: String, required: true },
-      userId: { type: Types.ObjectId, required: true },
-      image: { type: String, required: true },
-    },
-    required: true,
-  })
-  author!: {
-    userId: Types.ObjectId;
-    fullName: string;
-    username: string;
-    email: string;
-    image: string;
-  };
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
+  authorId!: Types.ObjectId;
 
   @Prop({ type: [String], required: true, index: true })
   ingredients!: string[];
 
-  @Prop({ type: [String], index: true })
+  @Prop({
+    type: [String],
+    index: true,
+    set: (tags: string[]) => tags.map((t) => t.toLowerCase().trim()),
+  })
   tags!: string[];
 
   @Prop({
@@ -73,7 +62,6 @@ export const RecipeSchema = SchemaFactory.createForClass(Recipe);
 
 RecipeSchema.index({
   title: 'text',
-  'author.fullName': 'text',
   ingredients: 'text',
   tags: 'text',
 });

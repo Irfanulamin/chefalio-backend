@@ -11,23 +11,8 @@ export class Cookbook {
   @Prop({ required: true })
   description!: string;
 
-  @Prop({
-    type: {
-      fullName: { type: String, required: true, index: true },
-      username: { type: String, required: true },
-      email: { type: String, required: true },
-      userId: { type: Types.ObjectId, required: true },
-      image: { type: String, required: true },
-    },
-    required: true,
-  })
-  author!: {
-    userId: Types.ObjectId;
-    fullName: string;
-    username: string;
-    email: string;
-    image: string;
-  };
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
+  authorId!: Types.ObjectId;
 
   @Prop({
     type: String,
@@ -46,6 +31,4 @@ export const CookbookSchema = SchemaFactory.createForClass(Cookbook);
 
 CookbookSchema.index({
   title: 'text',
-  'author.fullName': 'text',
-  'author.username': 'text',
 });

@@ -13,6 +13,8 @@ import {
   HttpStatus,
   Query,
   UploadedFile,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { CookbookService } from './cookbook.service';
 import { CreateCookbookDto } from './dto/create-cookbook.dto';
@@ -56,10 +58,10 @@ export class CookbookController {
   @Get()
   @UseGuards(AuthGuard)
   findAll(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('search') search: string,
-    @Query('author') author: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('search') search: string = '',
+    @Query('author') author: string = '',
   ) {
     return this.cookbookService.findAll(page, limit, search, author);
   }

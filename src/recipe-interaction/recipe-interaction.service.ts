@@ -11,6 +11,7 @@ export class RecipeInteractionService {
     @InjectModel(RecipeInteraction.name)
     private interactionModel: Model<RecipeInteraction>,
   ) {}
+
   async toggleSave(userId: string, recipeId: string) {
     const uid = new Types.ObjectId(userId);
     const rid = new Types.ObjectId(recipeId);
@@ -125,7 +126,13 @@ export class RecipeInteractionService {
     const data = await this.interactionModel
       .find({ userId: uid, isSaved: true })
       .sort({ savedAt: -1 })
-      .populate('recipeId')
+      .populate({
+        path: 'recipeId',
+        populate: {
+          path: 'authorId',
+          select: 'fullName username email profile_url',
+        },
+      })
       .lean();
     return {
       success: true,
@@ -140,7 +147,13 @@ export class RecipeInteractionService {
     const data = await this.interactionModel
       .find({ userId: uid, isLoved: true })
       .sort({ lovedAt: -1 })
-      .populate('recipeId')
+      .populate({
+        path: 'recipeId',
+        populate: {
+          path: 'authorId',
+          select: 'fullName username email profile_url',
+        },
+      })
       .lean();
     return {
       success: true,
@@ -155,6 +168,7 @@ export class RecipeInteractionService {
 
     const pipeline: PipelineStage[] = [
       // Step 1: only look at recipes by this chef
+      // authorId is now a plain ObjectId ref, so we match directly on recipe.authorId
       {
         $lookup: {
           from: 'recipes',
@@ -165,7 +179,7 @@ export class RecipeInteractionService {
       },
       { $unwind: '$recipe' },
       {
-        $match: { 'recipe.author.userId': chefObjectId },
+        $match: { 'recipe.authorId': chefObjectId },
       },
       // Step 2: group per recipe
       {
@@ -190,9 +204,9 @@ export class RecipeInteractionService {
           },
         },
       },
-      { $unset: 'uniqueUsers' }, // drop the raw array before returning
+      { $unset: 'uniqueUsers' },
       { $sort: { engagementScore: -1 } },
-      { $limit: 10 }, // only return top 10, paginate if needed
+      { $limit: 10 },
     ];
 
     const results = await this.interactionModel.aggregate(pipeline);
@@ -225,7 +239,8 @@ export class RecipeInteractionService {
           },
         },
       },
-      // One lookup shared across all three facets
+      // Lookup recipe — authorId is now a ref, so $lookup the user separately if needed.
+      // For admin stats we only need title and thumbnail, so no author lookup needed here.
       {
         $lookup: {
           from: 'recipes',
@@ -235,7 +250,6 @@ export class RecipeInteractionService {
             {
               $project: {
                 title: 1,
-                'author.fullName': 1,
                 images: { $slice: ['$images', 1] },
               },
             },
@@ -244,7 +258,6 @@ export class RecipeInteractionService {
         },
       },
       { $unwind: { path: '$recipe', preserveNullAndEmptyArrays: false } },
-      // Fan out into 3 sorted top-3 lists in one shot
       {
         $facet: {
           topEngaged: [{ $sort: { engagementScore: -1 } }, { $limit: 3 }],

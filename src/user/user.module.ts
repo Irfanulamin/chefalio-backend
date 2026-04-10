@@ -4,12 +4,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './schema/user.schema';
 import { UserController } from './user.controller';
 import { CloudinaryService } from '../services/cloudinary.service';
-import { RecipeModule } from '../recipe/recipe.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
-    RecipeModule,
   ],
   providers: [UserService, CloudinaryService],
   controllers: [UserController],

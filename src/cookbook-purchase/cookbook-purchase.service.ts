@@ -39,7 +39,7 @@ export class CookbookPurchaseService {
       throw new NotFoundException('Cookbook not found');
     }
 
-    if (cookbook.author.userId.toString() === userId) {
+    if (cookbook.authorId.toString() === userId) {
       throw new ForbiddenException('You cannot purchase your own cookbook');
     }
 
@@ -73,7 +73,7 @@ export class CookbookPurchaseService {
         cookbookId: dto.cookbookId,
         buyerId: userId,
         receiptEmail: dto.receiptEmail,
-        billingAddress: JSON.stringify(dto.billingAddress ?? {}), // 👈
+        billingAddress: JSON.stringify(dto.billingAddress ?? {}),
       },
     });
 
@@ -122,7 +122,7 @@ export class CookbookPurchaseService {
       throw new NotFoundException('Cookbook not found');
     }
 
-    if (cookbook.author.userId.toString() !== chefId) {
+    if (cookbook.authorId.toString() !== chefId) {
       throw new ForbiddenException(
         'You can only update orders for your own cookbooks',
       );
@@ -295,7 +295,7 @@ export class CookbookPurchaseService {
     await this.purchaseModel.create({
       cookbookId: new Types.ObjectId(cookbookId),
       buyerId: new Types.ObjectId(buyerId),
-      chefId: new Types.ObjectId(cookbook.author.userId),
+      chefId: new Types.ObjectId(cookbook.authorId),
       cookbookTitle: cookbook.title,
       cookbookImage: cookbook.cookbook_image,
       price: cookbook.price,

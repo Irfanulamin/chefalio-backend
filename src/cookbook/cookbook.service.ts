@@ -18,6 +18,7 @@ export class CookbookService {
     @InjectModel(Cookbook.name) private cookbookModel: Model<Cookbook>,
     private readonly cloudinaryService: CloudinaryService,
   ) {}
+
   async create(
     userId: string,
     createCookbookDto: CreateCookbookDto,
@@ -33,18 +34,18 @@ export class CookbookService {
     const cookbook = await this.cookbookModel.create({
       ...createCookbookDto,
       cookbook_image,
-      author: {
-        userId: user._id,
-        fullName: user.fullName,
-        username: user.username,
-        email: user.email,
-        image: user.profile_url,
-      },
+      authorId: user._id,
     });
+
+    const populated = await cookbook.populate(
+      'authorId',
+      'fullName username email profile_url',
+    );
+
     return {
       success: true,
       message: 'Cookbook created successfully',
-      data: cookbook,
+      data: populated,
     };
   }
 
@@ -62,18 +63,36 @@ export class CookbookService {
       ];
     }
 
+    // If filtering by author fullName, resolve to userId first
     if (author) {
-      query['author.username'] = author;
+      const authorUsers = await this.userModel
+        .find({
+          fullName: { $regex: author, $options: 'i' }, // case-insensitive partial match
+        })
+        .select('_id');
+
+      if (!authorUsers.length) {
+        return {
+          success: true,
+          message: 'Cookbooks retrieved successfully',
+          data: [],
+          pagination: { total: 0, page, limit, totalPages: 0 },
+        };
+      }
+
+      query.authorId = { $in: authorUsers.map((u) => u._id) };
     }
 
-    const data = await this.cookbookModel
-      .find(query)
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 })
-      .select('-__v -updatedAt -createdAt');
-
-    const total = await this.cookbookModel.countDocuments(query);
+    const [data, total] = await Promise.all([
+      this.cookbookModel
+        .find(query)
+        .populate('authorId', 'fullName username email profile_url')
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 })
+        .select('-__v -updatedAt -createdAt'),
+      this.cookbookModel.countDocuments(query),
+    ]);
 
     return {
       success: true,
@@ -89,7 +108,9 @@ export class CookbookService {
   }
 
   async findOne(id: string) {
-    const cookbook = await this.cookbookModel.findById(id);
+    const cookbook = await this.cookbookModel
+      .findById(id)
+      .populate('authorId', 'fullName username email profile_url');
     if (!cookbook) {
       throw new NotFoundException('Cookbook not found');
     }
@@ -110,7 +131,7 @@ export class CookbookService {
     if (!cookbook) {
       throw new NotFoundException('Cookbook not found');
     }
-    if (cookbook.author.userId.toString() !== userId) {
+    if (cookbook.authorId.toString() !== userId) {
       throw new ForbiddenException(
         'You are not authorized to update this cookbook',
       );
@@ -120,11 +141,14 @@ export class CookbookService {
       await this.cloudinaryService.deleteImage(cookbook.cookbook_image);
       cookbook_image = await this.cloudinaryService.uploadImage(image);
     }
-    const updatedCookbook = await this.cookbookModel.findByIdAndUpdate(
-      id,
-      { ...updateCookbookDto, cookbook_image },
-      { new: true },
-    );
+    const updatedCookbook = await this.cookbookModel
+      .findByIdAndUpdate(
+        id,
+        { ...updateCookbookDto, cookbook_image },
+        { new: true },
+      )
+      .populate('authorId', 'fullName username email profile_url');
+
     return {
       success: true,
       message: 'Cookbook updated successfully',
@@ -142,7 +166,7 @@ export class CookbookService {
       throw new NotFoundException('Cookbook not found');
     }
 
-    if (cookbook.author.userId.toString() !== userId && userRole !== 'admin') {
+    if (cookbook.authorId.toString() !== userId && userRole !== 'admin') {
       throw new ForbiddenException(
         'You are not authorized to delete this cookbook',
       );
@@ -159,6 +183,7 @@ export class CookbookService {
   async findOtherCookbooks(excludeId: string, limit: number) {
     const cookbooks = await this.cookbookModel
       .find({ _id: { $ne: excludeId } })
+      .populate('authorId', 'fullName username email profile_url')
       .limit(limit);
     return {
       success: true,
