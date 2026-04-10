@@ -9,8 +9,9 @@ import { RecipeModule } from './recipe/recipe.module';
 import { RecipeInteractionModule } from './recipe-interaction/recipe-interaction.module';
 import { CookbookModule } from './cookbook/cookbook.module';
 import { CookbookPurchaseModule } from './cookbook-purchase/cookbook-purchase.module';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtModule, JwtService } from '@nestjs/jwt';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -33,9 +34,17 @@ import { JwtModule, JwtService } from '@nestjs/jwt';
     RecipeInteractionModule,
     CookbookModule,
     CookbookPurchaseModule,
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 5 }]),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 200 }]),
   ],
   controllers: [AppController],
-  providers: [AppService, ConfigService, JwtService],
+  providers: [
+    AppService,
+    ConfigService,
+    JwtService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

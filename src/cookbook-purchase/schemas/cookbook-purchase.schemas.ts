@@ -33,7 +33,7 @@ export class CookbookPurchase {
   @Prop({ required: true })
   price!: number;
 
-  @Prop({ required: true, index: true })
+  @Prop({ required: true, index: true, unique: true })
   stripeSessionId!: string;
 
   @Prop({

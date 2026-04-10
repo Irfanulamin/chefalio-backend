@@ -8,10 +8,12 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ResetToken, ResetTokenSchema } from './schemas/reset-token.schema';
 import { MailService } from '../services/mail.service';
 import { User, UserSchema } from '../user/schema/user.schema';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
     UserModule,
+    ThrottlerModule,
     MongooseModule.forFeature([
       { name: ResetToken.name, schema: ResetTokenSchema },
       { name: User.name, schema: UserSchema },

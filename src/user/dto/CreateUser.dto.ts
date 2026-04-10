@@ -11,27 +11,27 @@ export class CreateUserDto {
   @IsNotEmpty()
   @IsString()
   @MaxLength(50)
-  fullName: string;
+  fullName!: string;
 
   @IsNotEmpty()
   @IsString()
   @MaxLength(30)
   @MinLength(3)
-  username: string;
+  username!: string;
 
   @IsEmail()
   @IsNotEmpty()
-  email: string;
+  email!: string;
 
   @IsString()
   @IsNotEmpty()
   @MinLength(6)
-  password: string;
+  password!: string;
 
   @IsString()
   @IsNotEmpty()
-  @IsIn(['user', 'chef', 'admin'], {
-    message: 'Role must be either user, chef, or admin',
+  @IsIn(['user', 'chef'], {
+    message: 'Role must be either user or chef',
   })
-  role: string;
+  role!: string;
 }

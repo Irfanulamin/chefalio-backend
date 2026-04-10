@@ -62,6 +62,7 @@ export const RecipeSchema = SchemaFactory.createForClass(Recipe);
 
 RecipeSchema.index({
   title: 'text',
+  description: 'text',
   ingredients: 'text',
   tags: 'text',
 });

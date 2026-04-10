@@ -50,46 +50,33 @@ export class CookbookService {
   }
 
   async findAll(page: number, limit: number, search: string, author: string) {
-    const skip = (page - 1) * limit;
+    const query: Record<string, any> = { stockCount: { $gt: 0 } };
 
-    const query: Record<string, any> = {
-      stockCount: { $gt: 0 },
-    };
+    if (search) query.$text = { $search: search };
 
-    if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-      ];
-    }
-
-    // If filtering by author fullName, resolve to userId first
     if (author) {
       const authorUsers = await this.userModel
-        .find({
-          fullName: { $regex: author, $options: 'i' }, // case-insensitive partial match
-        })
+        .find({ fullName: { $regex: author, $options: 'i' } })
         .select('_id');
 
-      if (!authorUsers.length) {
+      if (!authorUsers.length)
         return {
           success: true,
           message: 'Cookbooks retrieved successfully',
           data: [],
           pagination: { total: 0, page, limit, totalPages: 0 },
         };
-      }
 
       query.authorId = { $in: authorUsers.map((u) => u._id) };
     }
 
     const [data, total] = await Promise.all([
       this.cookbookModel
-        .find(query)
+        .find(query, search ? { score: { $meta: 'textScore' } } : {})
         .populate('authorId', 'fullName username email profile_url')
-        .skip(skip)
+        .skip((page - 1) * limit)
         .limit(limit)
-        .sort({ createdAt: -1 })
+        .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
         .select('-__v -updatedAt -createdAt'),
       this.cookbookModel.countDocuments(query),
     ]);
@@ -98,12 +85,7 @@ export class CookbookService {
       success: true,
       message: 'Cookbooks retrieved successfully',
       data,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
 
@@ -138,7 +120,10 @@ export class CookbookService {
     }
     let cookbook_image = cookbook.cookbook_image;
     if (image && cookbook.cookbook_image) {
-      await this.cloudinaryService.deleteImage(cookbook.cookbook_image);
+      const publicId = this.cloudinaryService.getCloudinaryPublicId(
+        cookbook.cookbook_image,
+      );
+      if (publicId) await this.cloudinaryService.deleteImage(publicId); // pass publicId, not URL
       cookbook_image = await this.cloudinaryService.uploadImage(image);
     }
     const updatedCookbook = await this.cookbookModel
@@ -172,23 +157,14 @@ export class CookbookService {
       );
     }
 
-    await this.cloudinaryService.deleteImage(cookbook.cookbook_image);
+    const publicId = this.cloudinaryService.getCloudinaryPublicId(
+      cookbook.cookbook_image,
+    );
+    if (publicId) await this.cloudinaryService.deleteImage(publicId); // same fix
     await this.cookbookModel.findByIdAndDelete(id);
     return {
       success: true,
       message: 'Cookbook removed successfully',
-    };
-  }
-
-  async findOtherCookbooks(excludeId: string, limit: number) {
-    const cookbooks = await this.cookbookModel
-      .find({ _id: { $ne: excludeId } })
-      .populate('authorId', 'fullName username email profile_url')
-      .limit(limit);
-    return {
-      success: true,
-      message: 'Other cookbooks retrieved successfully',
-      data: cookbooks,
     };
   }
 }

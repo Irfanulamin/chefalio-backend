@@ -29,6 +29,4 @@ export class Cookbook {
 
 export const CookbookSchema = SchemaFactory.createForClass(Cookbook);
 
-CookbookSchema.index({
-  title: 'text',
-});
+CookbookSchema.index({ title: 'text', description: 'text' });

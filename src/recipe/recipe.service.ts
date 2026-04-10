@@ -65,10 +65,7 @@ export class RecipeService {
     const filter: Record<string, any> = {};
 
     if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-      ];
+      filter.$text = { $search: search };
     }
 
     if (tags) {
@@ -85,7 +82,7 @@ export class RecipeService {
     // If filtering by author username, resolve to userId first
     if (author) {
       const authorUser = await this.userModel
-        .findOne({ username: author })
+        .findOne({ username: { $regex: author, $options: 'i' } }) // ← partial match
         .select('_id');
       if (!authorUser) {
         return {
@@ -103,11 +100,11 @@ export class RecipeService {
 
     const [recipes, total] = await Promise.all([
       this.recipeModel
-        .find(filter)
+        .find(filter, search ? { score: { $meta: 'textScore' } } : {})
         .populate('authorId', 'fullName username email profile_url')
         .skip((page - 1) * limit)
         .limit(limit)
-        .sort({ createdAt: -1 }),
+        .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 }),
       this.recipeModel.countDocuments(filter),
     ]);
 
