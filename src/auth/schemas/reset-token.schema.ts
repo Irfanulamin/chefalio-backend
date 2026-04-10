@@ -6,13 +6,13 @@ export type ResetTokenDocument = HydratedDocument<ResetToken>;
 @Schema({ timestamps: false, versionKey: false })
 export class ResetToken {
   @Prop({ required: true })
-  token: string;
+  token!: string;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  user: Types.ObjectId;
+  user!: Types.ObjectId;
 
   @Prop({ required: true })
-  expiresAt: Date;
+  expiresAt!: Date;
 }
 
 export const ResetTokenSchema = SchemaFactory.createForClass(ResetToken);

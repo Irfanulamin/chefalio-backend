@@ -6,22 +6,22 @@ export type RecipeInteractionDocument = RecipeInteraction & Document;
 @Schema({ timestamps: true })
 export class RecipeInteraction {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
-  userId: Types.ObjectId;
+  userId!: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Recipe', required: true, index: true })
-  recipeId: Types.ObjectId;
+  recipeId!: Types.ObjectId;
 
   @Prop({ default: false })
-  isSaved: boolean;
+  isSaved!: boolean;
 
   @Prop({ default: false })
-  isLoved: boolean;
+  isLoved!: boolean;
 
   @Prop({ type: Date, default: null })
-  savedAt: Date | null;
+  savedAt!: Date | null;
 
   @Prop({ type: Date, default: null })
-  lovedAt: Date | null;
+  lovedAt!: Date | null;
 }
 
 export const RecipeInteractionSchema =
