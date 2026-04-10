@@ -18,11 +18,7 @@ export class RecipeInteractionService {
 
     const recipeExists = await this.recipeModel.exists({ _id: rid });
     if (!recipeExists) {
-      return {
-        success: false,
-        statusCode: 404,
-        message: 'Recipe not found',
-      };
+      return { success: false, statusCode: 404, message: 'Recipe not found' };
     }
 
     const now = new Date();
@@ -36,18 +32,12 @@ export class RecipeInteractionService {
             isSaved: { $not: [{ $ifNull: ['$isSaved', false] }] },
           },
         },
-        {
-          $set: {
-            savedAt: { $cond: ['$isSaved', now, null] },
-          },
-        },
+        { $set: { savedAt: { $cond: ['$isSaved', now, null] } } },
       ],
       { upsert: true, returnDocument: 'before', updatePipeline: true },
     );
 
     const wasSaved = previous?.isSaved ?? false;
-    const newState = !wasSaved;
-
     await this.recipeModel.findByIdAndUpdate(rid, {
       $inc: { savedCount: wasSaved ? -1 : 1 },
     });
@@ -56,7 +46,7 @@ export class RecipeInteractionService {
       success: true,
       statusCode: 200,
       message: 'Recipe save status updated successfully',
-      isSaved: newState,
+      isSaved: !wasSaved,
     };
   }
 
@@ -66,11 +56,7 @@ export class RecipeInteractionService {
 
     const recipeExists = await this.recipeModel.exists({ _id: rid });
     if (!recipeExists) {
-      return {
-        success: false,
-        statusCode: 404,
-        message: 'Recipe not found',
-      };
+      return { success: false, statusCode: 404, message: 'Recipe not found' };
     }
 
     const now = new Date();
@@ -84,18 +70,12 @@ export class RecipeInteractionService {
             isLoved: { $not: [{ $ifNull: ['$isLoved', false] }] },
           },
         },
-        {
-          $set: {
-            lovedAt: { $cond: ['$isLoved', now, null] },
-          },
-        },
+        { $set: { lovedAt: { $cond: ['$isLoved', now, null] } } },
       ],
       { upsert: true, returnDocument: 'before', updatePipeline: true },
     );
 
     const wasLoved = previous?.isLoved ?? false;
-    const newState = !wasLoved;
-
     await this.recipeModel.findByIdAndUpdate(rid, {
       $inc: { lovedCount: wasLoved ? -1 : 1 },
     });
@@ -104,10 +84,11 @@ export class RecipeInteractionService {
       success: true,
       statusCode: 200,
       message: 'Recipe love status updated successfully',
-      isLoved: newState,
+      isLoved: !wasLoved,
     };
   }
 
+  // ── Single recipe stats (kept for the detail page) ────────────────────────
   async getInteractionStatus(userId: string, recipeId: string) {
     const doc = await this.interactionModel
       .findOne(
@@ -119,6 +100,43 @@ export class RecipeInteractionService {
       )
       .lean();
     return { isSaved: doc?.isSaved ?? false, isLoved: doc?.isLoved ?? false };
+  }
+
+  // ── NEW: Batch stats — one DB query for an entire page of recipes ─────────
+  // Returns a map of recipeId → { isSaved, isLoved }
+  // Any recipe the user hasn't interacted with defaults to false/false.
+  async getBatchInteractionStatus(
+    userId: string,
+    recipeIds: string[],
+  ): Promise<Record<string, { isSaved: boolean; isLoved: boolean }>> {
+    if (!recipeIds.length) return {};
+
+    const objectIds = recipeIds.map((id) => new Types.ObjectId(id));
+
+    const docs = await this.interactionModel
+      .find(
+        {
+          userId: new Types.ObjectId(userId),
+          recipeId: { $in: objectIds },
+        },
+        { recipeId: 1, isSaved: 1, isLoved: 1 },
+      )
+      .lean();
+
+    // Build a map, then fill in defaults for any recipe not in the result
+    const map: Record<string, { isSaved: boolean; isLoved: boolean }> = {};
+
+    for (const id of recipeIds) {
+      map[id] = { isSaved: false, isLoved: false };
+    }
+    for (const doc of docs) {
+      map[doc.recipeId.toString()] = {
+        isSaved: doc.isSaved ?? false,
+        isLoved: doc.isLoved ?? false,
+      };
+    }
+
+    return map;
   }
 
   async getSavedRecipes(userId: string) {
@@ -165,10 +183,7 @@ export class RecipeInteractionService {
 
   async getChefAnalytics(chefId: string) {
     const chefObjectId = new Types.ObjectId(chefId);
-
     const pipeline: PipelineStage[] = [
-      // Step 1: only look at recipes by this chef
-      // authorId is now a plain ObjectId ref, so we match directly on recipe.authorId
       {
         $lookup: {
           from: 'recipes',
@@ -178,10 +193,7 @@ export class RecipeInteractionService {
         },
       },
       { $unwind: '$recipe' },
-      {
-        $match: { 'recipe.authorId': chefObjectId },
-      },
-      // Step 2: group per recipe
+      { $match: { 'recipe.authorId': chefObjectId } },
       {
         $group: {
           _id: '$recipeId',
@@ -192,7 +204,6 @@ export class RecipeInteractionService {
           uniqueUsers: { $addToSet: '$userId' },
         },
       },
-      // Step 3: score + sort in DB, not in JS
       {
         $addFields: {
           uniqueUsersCount: { $size: '$uniqueUsers' },
@@ -210,7 +221,6 @@ export class RecipeInteractionService {
     ];
 
     const results = await this.interactionModel.aggregate(pipeline);
-
     return {
       success: true,
       statusCode: 200,
@@ -239,20 +249,13 @@ export class RecipeInteractionService {
           },
         },
       },
-      // Lookup recipe — authorId is now a ref, so $lookup the user separately if needed.
-      // For admin stats we only need title and thumbnail, so no author lookup needed here.
       {
         $lookup: {
           from: 'recipes',
           localField: '_id',
           foreignField: '_id',
           pipeline: [
-            {
-              $project: {
-                title: 1,
-                images: { $slice: ['$images', 1] },
-              },
-            },
+            { $project: { title: 1, images: { $slice: ['$images', 1] } } },
           ],
           as: 'recipe',
         },
