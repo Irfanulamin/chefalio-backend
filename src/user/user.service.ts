@@ -230,8 +230,4 @@ export class UserService {
       },
     };
   }
-
-  async updateMany(filter: any, update: any) {
-    return this.userModel.updateMany(filter, update);
-  }
 }
