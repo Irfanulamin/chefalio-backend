@@ -8,7 +8,7 @@ import { UpdateCookbookDto } from './dto/update-cookbook.dto';
 import { CloudinaryService } from '../services/cloudinary.service';
 import { User } from '../user/schema/user.schema';
 import { Cookbook } from './schemas/cookbook.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 
 @Injectable()
@@ -81,6 +81,45 @@ export class CookbookService {
       message: 'Cookbooks retrieved successfully',
       data,
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async findMyCookbooks(
+    page: number,
+    limit: number,
+    search: string,
+    userId: string,
+  ) {
+    const query: Record<string, any> = {
+      authorId: new Types.ObjectId(userId),
+    };
+
+    if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+      query.$or = [{ title: searchRegex }, { description: searchRegex }];
+    }
+
+    const [data, total] = await Promise.all([
+      this.cookbookModel
+        .find(query)
+        .populate('authorId', 'fullName username email profile_url')
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .sort({ createdAt: -1 }),
+
+      this.cookbookModel.countDocuments(query),
+    ]);
+
+    return {
+      success: true,
+      message: 'My Cookbooks retrieved successfully',
+      data,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 

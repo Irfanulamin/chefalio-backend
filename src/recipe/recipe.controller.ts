@@ -83,8 +83,8 @@ export class RecipeController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.Admin)
-  @Get('dashboard/analytics')
+  @Roles(Role.Admin, Role.Chef)
+  @Get('/dashboard/analytics')
   async getDashboardAnalytics() {
     return this.recipeService.getDashboardAnalytics();
   }

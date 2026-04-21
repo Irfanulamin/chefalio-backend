@@ -66,6 +66,22 @@ export class CookbookController {
     return this.cookbookService.findAll(page, limit, search, author);
   }
 
+  @Get('my-cookbooks')
+  @UseGuards(AuthGuard)
+  findMyCookbooks(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('search') search: string = '',
+    @Req() req: Request & { user: { sub: string } },
+  ) {
+    return this.cookbookService.findMyCookbooks(
+      page,
+      limit,
+      search,
+      req.user.sub,
+    );
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseObjectIdPipe) id: string) {
     return this.cookbookService.findOne(id);
