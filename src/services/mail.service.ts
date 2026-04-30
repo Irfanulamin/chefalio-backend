@@ -20,7 +20,7 @@ export class MailService {
 
     try {
       await this.resend.emails.send({
-        from: 'Chefalio Support <no-reply@eventifyseu.online>',
+        from: 'Chefalio Support <no-reply@chefalio.xyz>',
         to,
         subject: 'Password Reset Instructions',
         html: `
