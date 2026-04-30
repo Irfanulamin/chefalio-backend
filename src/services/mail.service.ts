@@ -82,7 +82,7 @@ export class MailService {
   ) {
     try {
       await this.resend.emails.send({
-        from: 'Chefalio Support <no-reply@eventifyseu.online>',
+        from: 'Chefalio Support <no-reply@chefalio.xyz>',
         to,
         subject: 'Your Cookbook Purchase Receipt',
         html: `<!-- Preheader (hidden preview text in inbox) -->
