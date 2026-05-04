@@ -181,8 +181,40 @@ export class RecipeInteractionService {
     };
   }
 
-  async getChefAnalytics(chefId: string) {
+  async getChefAnalytics(chefId: string, period: string = 'lifetime') {
     const chefObjectId = new Types.ObjectId(chefId);
+
+    const now = new Date();
+    let dateFrom: Date | undefined;
+
+    switch (period) {
+      case 'daily':
+        dateFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'weekly': {
+        const d = new Date(now);
+        d.setDate(d.getDate() - 6);
+        d.setHours(0, 0, 0, 0);
+        dateFrom = d;
+        break;
+      }
+      case 'monthly': {
+        const d = new Date(now);
+        d.setDate(d.getDate() - 29);
+        d.setHours(0, 0, 0, 0);
+        dateFrom = d;
+        break;
+      }
+    }
+
+    const lovedCond = dateFrom
+      ? { $and: [{ $eq: ['$isLoved', true] }, { $gte: ['$lovedAt', dateFrom] }] }
+      : '$isLoved';
+
+    const savedCond = dateFrom
+      ? { $and: [{ $eq: ['$isSaved', true] }, { $gte: ['$savedAt', dateFrom] }] }
+      : '$isSaved';
+
     const pipeline: PipelineStage[] = [
       {
         $lookup: {
@@ -199,8 +231,8 @@ export class RecipeInteractionService {
           _id: '$recipeId',
           title: { $first: '$recipe.title' },
           thumbnail: { $first: { $arrayElemAt: ['$recipe.images', 0] } },
-          lovedCount: { $sum: { $cond: ['$isLoved', 1, 0] } },
-          savedCount: { $sum: { $cond: ['$isSaved', 1, 0] } },
+          lovedCount: { $sum: { $cond: [lovedCond, 1, 0] } },
+          savedCount: { $sum: { $cond: [savedCond, 1, 0] } },
           uniqueUsers: { $addToSet: '$userId' },
         },
       },

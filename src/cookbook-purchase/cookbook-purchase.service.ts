@@ -138,15 +138,47 @@ export class CookbookPurchaseService {
     };
   }
 
-  async getChefEarningsAnalytics(chefId: string) {
+  async getChefEarningsAnalytics(
+    chefId: string,
+    period: string = 'lifetime',
+  ) {
     const CHEF_PROFIT_RATE = 0.8;
+
+    const now = new Date();
+    let dateFrom: Date | undefined;
+    let groupFormat = '%Y-%m-%d';
+
+    switch (period) {
+      case 'daily':
+        dateFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        groupFormat = '%H:00';
+        break;
+      case 'weekly': {
+        const d = new Date(now);
+        d.setDate(d.getDate() - 6);
+        d.setHours(0, 0, 0, 0);
+        dateFrom = d;
+        break;
+      }
+      case 'monthly': {
+        const d = new Date(now);
+        d.setDate(d.getDate() - 29);
+        d.setHours(0, 0, 0, 0);
+        dateFrom = d;
+        break;
+      }
+    }
+
+    // Build match inline so Mongoose serialises ObjectId correctly
+    const chefOid = new Types.ObjectId(chefId);
 
     const [totals, salesByDate] = await Promise.all([
       this.purchaseModel.aggregate([
         {
           $match: {
-            chefId: new Types.ObjectId(chefId),
+            chefId: chefOid,
             paymentStatus: 'paid',
+            ...(dateFrom ? { createdAt: { $gte: dateFrom } } : {}),
           },
         },
         {
@@ -161,13 +193,16 @@ export class CookbookPurchaseService {
       this.purchaseModel.aggregate([
         {
           $match: {
-            chefId: new Types.ObjectId(chefId),
+            chefId: chefOid,
             paymentStatus: 'paid',
+            ...(dateFrom ? { createdAt: { $gte: dateFrom } } : {}),
           },
         },
         {
           $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            _id: {
+              $dateToString: { format: groupFormat, date: '$createdAt' },
+            },
             amount: { $sum: '$price' },
             orders: { $sum: 1 },
           },
@@ -190,6 +225,7 @@ export class CookbookPurchaseService {
         totalProfit,
         profitRate: `${CHEF_PROFIT_RATE * 100}%`,
         totalOrders,
+        period,
         salesGraph: salesByDate,
       },
     };

@@ -154,6 +154,11 @@ export class RecipeService {
       throw new ForbiddenException('You do not own this recipe');
     }
 
+    for (const imgUrl of recipe.images) {
+      const publicId = this.cloudinaryService.getCloudinaryPublicId(imgUrl);
+      if (publicId) await this.cloudinaryService.deleteImage(publicId);
+    }
+
     await this.recipeModel.findByIdAndDelete(id);
     return { success: true, message: 'Recipe deleted successfully' };
   }

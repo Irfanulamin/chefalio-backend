@@ -6,6 +6,7 @@ import {
   UseGuards,
   Req,
   Body,
+  Query,
 } from '@nestjs/common';
 import { RecipeInteractionService } from './recipe-interaction.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -56,8 +57,11 @@ export class RecipeInteractionController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
   @Get('/analytics/chef')
-  getChefAnalytics(@Req() req: Request & { user: { sub: string } }) {
-    return this.recipeInteractionService.getChefAnalytics(req.user.sub);
+  getChefAnalytics(
+    @Req() req: Request & { user: { sub: string } },
+    @Query('period') period?: string,
+  ) {
+    return this.recipeInteractionService.getChefAnalytics(req.user.sub, period);
   }
 
   @UseGuards(AuthGuard, RolesGuard)

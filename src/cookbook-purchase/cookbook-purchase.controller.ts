@@ -8,6 +8,7 @@ import {
   Patch,
   Param,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import { CookbookPurchaseService } from './cookbook-purchase.service';
 import { CreateCookbookPurchaseDto } from './dto/create-cookbook-purchase.dto';
@@ -94,8 +95,12 @@ export class CookbookPurchaseController {
   @Roles(Role.Chef)
   async getChefEarningsAnalytics(
     @Req() req: Request & { user: { sub: string } },
+    @Query('period') period?: string,
   ) {
-    return this.cookbookPurchaseService.getChefEarningsAnalytics(req.user.sub);
+    return this.cookbookPurchaseService.getChefEarningsAnalytics(
+      req.user.sub,
+      period,
+    );
   }
 
   @Get('analytics/admin')

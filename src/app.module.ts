@@ -28,7 +28,7 @@ import { ChefModule } from './chef/chef.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        uri: config.getOrThrow<string>('MONGODB_URI'),
+       uri: config.get('MONGODB_URI'),
       }),
     }),
     RecipeModule,
