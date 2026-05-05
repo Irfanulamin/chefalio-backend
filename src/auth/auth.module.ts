@@ -33,7 +33,12 @@ import { FacebookStrategy } from './strategies/facebook.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, MailService, GoogleStrategy, FacebookStrategy],
+  providers: [
+    AuthService,
+    MailService,
+    ...(process.env.GOOGLE_CLIENT_ID ? [GoogleStrategy] : []),
+    ...(process.env.FACEBOOK_APP_ID ? [FacebookStrategy] : []),
+  ],
   exports: [JwtModule],
 })
 export class AuthModule {}
