@@ -182,6 +182,50 @@ export class UserService {
       .select('-password -__v -createdAt -updatedAt');
   }
 
+  async findOrCreateOAuthUser(data: {
+    provider: 'google' | 'facebook';
+    providerId: string;
+    email: string;
+    fullName: string;
+    profile_url?: string;
+  }) {
+    const idField = data.provider === 'google' ? 'googleId' : 'facebookId';
+
+    let user = await this.userModel.findOne({ [idField]: data.providerId });
+    if (user) return user;
+
+    user = await this.userModel.findOne({ email: data.email });
+    if (user) {
+      (user as any)[idField] = data.providerId;
+      await user.save();
+      return user;
+    }
+
+    const base = data.fullName
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '')
+      .slice(0, 20) || 'user';
+
+    let username = base;
+    let attempt = 0;
+    while (await this.userModel.exists({ username })) {
+      attempt++;
+      username = `${base}_${attempt}`;
+    }
+
+    return this.userModel.create({
+      fullName: data.fullName,
+      username,
+      email: data.email,
+      [idField]: data.providerId,
+      authProvider: data.provider,
+      profile_url:
+        data.profile_url ||
+        'https://i.ibb.co.com/XWqvgyv/Minimalist-Avatar-Illustration.jpg',
+    });
+  }
+
   async getUserAnalytics() {
     const [roleCounts, activeCounts, recentJoined] = await Promise.all([
       this.userModel.aggregate([

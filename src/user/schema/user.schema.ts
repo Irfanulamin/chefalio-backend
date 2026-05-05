@@ -14,8 +14,8 @@ export class User {
   @Prop({ required: true, unique: true })
   email!: string;
 
-  @Prop({ required: true })
-  password!: string;
+  @Prop()
+  password?: string;
 
   @Prop({ default: 'user', enum: ['user', 'chef', 'admin'] })
   role!: 'user' | 'chef' | 'admin';
@@ -28,6 +28,15 @@ export class User {
 
   @Prop({ default: true, required: true })
   isActive!: boolean;
+
+  @Prop({ default: 'local', enum: ['local', 'google', 'facebook'] })
+  authProvider!: 'local' | 'google' | 'facebook';
+
+  @Prop({ sparse: true })
+  googleId?: string;
+
+  @Prop({ sparse: true })
+  facebookId?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

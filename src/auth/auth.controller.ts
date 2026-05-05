@@ -16,6 +16,7 @@ import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { ChangePasswordDto } from './dto/changePassword.dto';
 import type { Response } from 'express';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
 
 @Controller('auth')
 export class AuthController {
@@ -85,5 +86,25 @@ export class AuthController {
   async getProfile(@Request() req) {
     const userId: string = req.user.sub;
     return await this.authService.getProfile(userId);
+  }
+
+  @Get('/google')
+  @UseGuards(PassportAuthGuard('google'))
+  googleAuth() {}
+
+  @Get('/google/callback')
+  @UseGuards(PassportAuthGuard('google'))
+  async googleCallback(@Request() req, @Res() res: Response) {
+    return this.authService.oauthLogin(req.user, res);
+  }
+
+  @Get('/facebook')
+  @UseGuards(PassportAuthGuard('facebook'))
+  facebookAuth() {}
+
+  @Get('/facebook/callback')
+  @UseGuards(PassportAuthGuard('facebook'))
+  async facebookCallback(@Request() req, @Res() res: Response) {
+    return this.authService.oauthLogin(req.user, res);
   }
 }

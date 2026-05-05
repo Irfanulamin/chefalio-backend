@@ -9,11 +9,15 @@ import { ResetToken, ResetTokenSchema } from './schemas/reset-token.schema';
 import { MailService } from '../services/mail.service';
 import { User, UserSchema } from '../user/schema/user.schema';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { PassportModule } from '@nestjs/passport';
+import { GoogleStrategy } from './strategies/google.strategy';
+import { FacebookStrategy } from './strategies/facebook.strategy';
 
 @Module({
   imports: [
     UserModule,
     ThrottlerModule,
+    PassportModule,
     MongooseModule.forFeature([
       { name: ResetToken.name, schema: ResetTokenSchema },
       { name: User.name, schema: UserSchema },
@@ -29,7 +33,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, MailService],
+  providers: [AuthService, MailService, GoogleStrategy, FacebookStrategy],
   exports: [JwtModule],
 })
 export class AuthModule {}

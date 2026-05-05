@@ -20,6 +20,7 @@ import { ChangePasswordDto } from './dto/changePassword.dto';
 import type { Response } from 'express';
 import crypto from 'crypto';
 import { User } from '../user/schema/user.schema';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,7 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
+    private readonly configService: ConfigService,
     @InjectModel(ResetToken.name) private resetTokenModel: Model<ResetToken>,
     @InjectModel(User.name) private userModel: Model<User>,
   ) {}
@@ -64,10 +66,11 @@ export class AuthService {
 
     const user = await this.userService.findByEmailOrUsername(userNameOrEmail);
 
-    if (
-      !user ||
-      !(await bcrypt.compare(loginUserDto.password, user.password))
-    ) {
+    if (!user || !user.password) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!(await bcrypt.compare(loginUserDto.password, user.password))) {
       throw new UnauthorizedException('Invalid credentials');
     }
     if (!user.isActive) {
@@ -161,6 +164,12 @@ export class AuthService {
       throw new BadRequestException('User not found');
     }
 
+    if (!user.password) {
+      throw new BadRequestException(
+        'Password change is not available for social login accounts',
+      );
+    }
+
     const isCurrentPasswordValid = await bcrypt.compare(
       changePasswordDto.currentPassword,
       user.password,
@@ -177,5 +186,24 @@ export class AuthService {
       statusCode: 200,
       message: 'Password has been changed successfully',
     };
+  }
+
+  async oauthLogin(user: any, res: Response) {
+    const payload = { sub: user._id, role: user.role };
+    const token = await this.jwtService.signAsync(payload);
+
+    res.cookie('access_token', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: 3600000,
+    });
+
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
+    const redirectPath = user.role === 'chef' ? '/chef/dashboard' : '/recipes';
+    res.redirect(`${frontendUrl}${redirectPath}`);
   }
 }
