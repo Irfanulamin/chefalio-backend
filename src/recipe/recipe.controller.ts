@@ -90,6 +90,15 @@ export class RecipeController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Chef)
+  @Get('/my/analytics')
+  async getChefRecipeAnalytics(
+    @Req() req: Request & { user: { sub: string } },
+  ) {
+    return this.recipeService.getChefRecipeAnalytics(req.user.sub);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
   @Get('/admin/upload-trend')
   async getAdminUploadTrend() {

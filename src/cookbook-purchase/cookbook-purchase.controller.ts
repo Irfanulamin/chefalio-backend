@@ -92,6 +92,15 @@ export class CookbookPurchaseController {
     return this.cookbookPurchaseService.getChefOrders(chefId);
   }
 
+  @Get('dashboard/chef')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Chef)
+  async getChefDashboardEarnings(
+    @Req() req: Request & { user: { sub: string } },
+  ) {
+    return this.cookbookPurchaseService.getChefDashboardEarnings(req.user.sub);
+  }
+
   @Get('analytics/chef')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)

@@ -324,6 +324,93 @@ export class RecipeService {
     };
   }
 
+  async getChefRecipeAnalytics(chefId: string) {
+    const chefObjectId = new Types.ObjectId(chefId);
+
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
+    fourteenDaysAgo.setHours(0, 0, 0, 0);
+
+    const [difficultyBreakdown, topTags, uploadTrend, topRecipes] =
+      await Promise.all([
+        this.recipeModel.aggregate([
+          { $match: { authorId: chefObjectId } },
+          { $group: { _id: '$difficulty', count: { $sum: 1 } } },
+          { $project: { _id: 0, difficulty: '$_id', count: 1 } },
+          { $sort: { count: -1 } },
+        ]),
+
+        this.recipeModel.aggregate([
+          { $match: { authorId: chefObjectId } },
+          { $unwind: '$tags' },
+          { $group: { _id: '$tags', count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 6 },
+          { $project: { _id: 0, tag: '$_id', count: 1 } },
+        ]),
+
+        this.recipeModel.aggregate([
+          {
+            $match: {
+              authorId: chefObjectId,
+              createdAt: { $gte: fourteenDaysAgo },
+            },
+          },
+          {
+            $group: {
+              _id: {
+                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+              },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { _id: 1 } },
+          { $project: { _id: 0, date: '$_id', count: 1 } },
+        ]),
+
+        this.recipeModel.aggregate([
+          { $match: { authorId: chefObjectId } },
+          {
+            $project: {
+              title: 1,
+              image: { $arrayElemAt: ['$images', 0] },
+              lovedCount: 1,
+              savedCount: 1,
+              engagementScore: {
+                $add: [
+                  { $multiply: ['$lovedCount', 2] },
+                  { $multiply: ['$savedCount', 1.5] },
+                ],
+              },
+            },
+          },
+          { $sort: { engagementScore: -1 } },
+          { $limit: 5 },
+        ]),
+      ]);
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'Chef recipe analytics retrieved successfully',
+      data: {
+        myDifficultyBreakdown: difficultyBreakdown,
+        myTopTags: topTags,
+        uploadTrend,
+        topRecipes: topRecipes.map((r) => ({
+          _id: String(r._id),
+          title: r.title as string,
+          image: r.image as string,
+          lovedCount: r.lovedCount as number,
+          savedCount: r.savedCount as number,
+          engagementScore: parseFloat(
+            (r.engagementScore as number).toFixed(1),
+          ),
+        })),
+      },
+    };
+  }
+
   async getAdminUploadTrend() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);

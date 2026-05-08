@@ -265,6 +265,77 @@ export class CookbookPurchaseService {
     };
   }
 
+  async getChefDashboardEarnings(chefId: string) {
+    const CHEF_PROFIT_RATE = 0.8;
+    const chefOid = new Types.ObjectId(chefId);
+
+    const [totals, recentOrders, topCookbooks] = await Promise.all([
+      this.purchaseModel.aggregate([
+        { $match: { chefId: chefOid, paymentStatus: 'paid' } },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: '$price' },
+            totalOrders: { $sum: 1 },
+          },
+        },
+      ]),
+
+      this.purchaseModel
+        .find({ chefId: chefOid })
+        .sort({ createdAt: -1 })
+        .limit(3)
+        .select(
+          'cookbookTitle cookbookImage price paymentStatus createdAt receiptEmail',
+        )
+        .lean(),
+
+      this.purchaseModel.aggregate([
+        { $match: { chefId: chefOid, paymentStatus: 'paid' } },
+        {
+          $group: {
+            _id: '$cookbookId',
+            cookbookTitle: { $first: '$cookbookTitle' },
+            cookbookImage: { $first: '$cookbookImage' },
+            totalSold: { $sum: 1 },
+            totalRevenue: { $sum: '$price' },
+          },
+        },
+        { $sort: { totalRevenue: -1 } },
+        { $limit: 3 },
+        {
+          $project: {
+            _id: 0,
+            cookbookId: '$_id',
+            cookbookTitle: 1,
+            cookbookImage: 1,
+            totalSold: 1,
+            totalRevenue: 1,
+          },
+        },
+      ]),
+    ]);
+
+    const totalRevenue = (totals[0]?.totalRevenue as number) ?? 0;
+    const totalOrders = (totals[0]?.totalOrders as number) ?? 0;
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'Chef dashboard earnings retrieved',
+      data: {
+        totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+        totalProfit: parseFloat((totalRevenue * CHEF_PROFIT_RATE).toFixed(2)),
+        totalOrders,
+        recentOrders,
+        topCookbooks: topCookbooks.map((c) => ({
+          ...c,
+          totalRevenue: parseFloat((c.totalRevenue as number).toFixed(2)),
+        })),
+      },
+    };
+  }
+
   async getAdminEarningsAnalytics() {
     const ADMIN_PROFIT_RATE = 0.2;
 
