@@ -6,6 +6,7 @@ import { User, UserSchema } from '../user/schema/user.schema';
 import { CloudinaryService } from '../services/cloudinary.service';
 import { Recipe, RecipeSchema } from './schemas/recipe.schema';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationModule } from '../notifications/notification.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AuthModule } from '../auth/auth.module';
       { name: User.name, schema: UserSchema },
       { name: Recipe.name, schema: RecipeSchema },
     ]),
+    NotificationModule,
   ],
   controllers: [RecipeController],
   providers: [RecipeService, CloudinaryService],

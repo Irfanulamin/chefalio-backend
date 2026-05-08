@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Cookbook, CookbookSchema } from './schemas/cookbook.schema';
 import { User, UserSchema } from '../user/schema/user.schema';
 import { CloudinaryService } from '../services/cloudinary.service';
+import { NotificationModule } from '../notifications/notification.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { CloudinaryService } from '../services/cloudinary.service';
       { name: User.name, schema: UserSchema },
       { name: Cookbook.name, schema: CookbookSchema },
     ]),
+    NotificationModule,
   ],
   controllers: [CookbookController],
   providers: [CookbookService, CloudinaryService],

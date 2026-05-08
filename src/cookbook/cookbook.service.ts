@@ -10,6 +10,7 @@ import { User } from '../user/schema/user.schema';
 import { Cookbook } from './schemas/cookbook.schema';
 import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
+import { NotificationService } from '../notifications/notification.service';
 
 @Injectable()
 export class CookbookService {
@@ -17,6 +18,7 @@ export class CookbookService {
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Cookbook.name) private cookbookModel: Model<Cookbook>,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async create(
@@ -41,6 +43,18 @@ export class CookbookService {
       'authorId',
       'fullName username email profile_url',
     );
+
+    this.notificationService
+      .create({
+        type: 'new_cookbook',
+        title: 'New Cookbook',
+        message: `${user.fullName} just published a new cookbook: "${createCookbookDto.title}"`,
+        actorName: user.fullName,
+        actorAvatar: user.profile_url,
+        targetId: cookbook._id as Types.ObjectId,
+        thumbnail: cookbook_image,
+      })
+      .catch(() => {});
 
     return {
       success: true,
@@ -186,6 +200,18 @@ export class CookbookService {
 
   async applyGlobalDiscount(discount: number) {
     await this.cookbookModel.updateMany({}, { $set: { discount } });
+
+    if (discount > 0) {
+      this.notificationService
+        .create({
+          type: 'discount',
+          title: 'Sale — Cookbooks on Discount!',
+          message: `All cookbooks are now ${discount}% off. Grab one before the sale ends!`,
+          discount,
+        })
+        .catch(() => {});
+    }
+
     return {
       success: true,
       message: `Global discount of ${discount}% applied to all cookbooks`,

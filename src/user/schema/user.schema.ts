@@ -34,6 +34,9 @@ export class User {
 
   @Prop({ sparse: true })
   googleId?: string;
+
+  @Prop({ type: Date })
+  notificationLastReadAt?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

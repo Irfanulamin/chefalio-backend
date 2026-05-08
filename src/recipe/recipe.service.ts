@@ -11,6 +11,7 @@ import { Model, Types } from 'mongoose';
 import { CloudinaryService } from '../services/cloudinary.service';
 import { Recipe } from './schemas/recipe.schema';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
+import { NotificationService } from '../notifications/notification.service';
 
 @Injectable()
 export class RecipeService {
@@ -18,6 +19,7 @@ export class RecipeService {
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Recipe.name) private recipeModel: Model<Recipe>,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async createRecipe(
@@ -45,6 +47,18 @@ export class RecipeService {
       images: imageUrls,
       authorId: user._id,
     });
+
+    this.notificationService
+      .create({
+        type: 'new_recipe',
+        title: 'New Recipe',
+        message: `${user.fullName} just shared a new recipe: "${dto.title}"`,
+        actorName: user.fullName,
+        actorAvatar: user.profile_url,
+        targetId: recipe._id as Types.ObjectId,
+        thumbnail: imageUrls[0],
+      })
+      .catch(() => {});
 
     return {
       success: true,
