@@ -13,6 +13,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { APP_GUARD } from '@nestjs/core';
 import { ChefModule } from './chef/chef.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ChefModule } from './chef/chef.module';
     CookbookPurchaseModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 200 }]),
     ChefModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [
