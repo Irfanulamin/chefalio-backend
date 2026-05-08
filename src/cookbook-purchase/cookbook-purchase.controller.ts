@@ -8,6 +8,7 @@ import {
   Patch,
   Param,
   BadRequestException,
+  Logger,
   Query,
   DefaultValuePipe,
   ParseIntPipe,
@@ -26,6 +27,7 @@ import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 
 @Controller('cookbook-purchase')
 export class CookbookPurchaseController {
+  private readonly logger = new Logger(CookbookPurchaseController.name);
   private stripe: Stripe;
   constructor(
     private readonly cookbookPurchaseService: CookbookPurchaseService,
@@ -47,8 +49,6 @@ export class CookbookPurchaseController {
   @Post('webhook')
   async handleStripeWebhook(@Req() req: RawBodyRequest<Request>) {
     const sig = req.headers['stripe-signature'] as string;
-    console.log('sig:', sig);
-    console.log('rawBody exists:', !!req.rawBody);
 
     if (!req.rawBody) return { received: false };
 
@@ -70,7 +70,7 @@ export class CookbookPurchaseController {
       try {
         await this.cookbookPurchaseService.confirmPayment(event.data.object);
       } catch (err) {
-        console.error(' confirmPayment failed:', err);
+        this.logger.error('confirmPayment failed', err);
       }
     }
 

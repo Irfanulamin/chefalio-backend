@@ -13,6 +13,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Role, Roles } from '../auth/roles.decorator';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
+import { BatchStatsDto } from './dto/batch-stats.dto';
 
 @Controller('recipe-interaction')
 export class RecipeInteractionController {
@@ -93,12 +94,12 @@ export class RecipeInteractionController {
   @Roles(Role.User)
   @Post('/stats/batch')
   getBatchStats(
-    @Body() body: { recipeIds: string[] },
+    @Body() dto: BatchStatsDto,
     @Req() req: Request & { user: { sub: string } },
   ) {
     return this.recipeInteractionService.getBatchInteractionStatus(
       req.user.sub,
-      body.recipeIds ?? [],
+      dto.recipeIds,
     );
   }
 }

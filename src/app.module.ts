@@ -10,28 +10,32 @@ import { RecipeInteractionModule } from './recipe-interaction/recipe-interaction
 import { CookbookModule } from './cookbook/cookbook.module';
 import { CookbookPurchaseModule } from './cookbook-purchase/cookbook-purchase.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { JwtModule, JwtService } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
 import { APP_GUARD } from '@nestjs/core';
 import { ChefModule } from './chef/chef.module';
 import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
-    JwtModule.register({
-      global: true,
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '1h' },
-    }),
-    AuthModule,
-    UserModule,
     ConfigModule.forRoot({ isGlobal: true }),
+    JwtModule.registerAsync({
+      global: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.getOrThrow<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '1h' },
+      }),
+    }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-       uri: config.get('MONGODB_URI'),
+        uri: config.getOrThrow<string>('MONGODB_URI'),
       }),
     }),
+    AuthModule,
+    UserModule,
     RecipeModule,
     RecipeInteractionModule,
     CookbookModule,
@@ -43,8 +47,6 @@ import { AiModule } from './ai/ai.module';
   controllers: [AppController],
   providers: [
     AppService,
-    ConfigService,
-    JwtService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

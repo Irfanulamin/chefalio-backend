@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Model, PipelineStage, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Recipe } from '../recipe/schemas/recipe.schema';
@@ -17,9 +17,7 @@ export class RecipeInteractionService {
     const rid = new Types.ObjectId(recipeId);
 
     const recipeExists = await this.recipeModel.exists({ _id: rid });
-    if (!recipeExists) {
-      return { success: false, statusCode: 404, message: 'Recipe not found' };
-    }
+    if (!recipeExists) throw new NotFoundException('Recipe not found');
 
     const now = new Date();
     const previous = await this.interactionModel.findOneAndUpdate(
@@ -55,9 +53,7 @@ export class RecipeInteractionService {
     const rid = new Types.ObjectId(recipeId);
 
     const recipeExists = await this.recipeModel.exists({ _id: rid });
-    if (!recipeExists) {
-      return { success: false, statusCode: 404, message: 'Recipe not found' };
-    }
+    if (!recipeExists) throw new NotFoundException('Recipe not found');
 
     const now = new Date();
     const previous = await this.interactionModel.findOneAndUpdate(

@@ -62,7 +62,7 @@ export class MailService {
         `,
       });
 
-      console.log(`Email sent to ${to}`);
+      this.logger.log(`Password reset email sent to ${to}`);
     } catch (error) {
       this.logger.error(`Failed to send password reset email to ${to}`, error);
       throw new InternalServerErrorException(
@@ -157,7 +157,7 @@ export class MailService {
 </table>`,
       });
 
-      console.log(`Purchase receipt sent to ${to}`);
+      this.logger.log(`Purchase receipt sent to ${to}`);
     } catch (error) {
       this.logger.error(`Failed to send purchase receipt to ${to}`, error);
       throw new InternalServerErrorException(

@@ -178,7 +178,10 @@ export class AuthService {
     };
   }
 
-  async oauthLogin(user: any, res: Response) {
+  async oauthLogin(
+    user: { _id: string; role: string; isActive: boolean },
+    res: Response,
+  ) {
     const frontendUrl = this.configService.get<string>(
       'FRONTEND_URL',
       'http://localhost:3000',

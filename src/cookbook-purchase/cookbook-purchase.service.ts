@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateCookbookPurchaseDto } from './dto/create-cookbook-purchase.dto';
@@ -14,6 +15,9 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class CookbookPurchaseService {
+  private readonly logger = new Logger(CookbookPurchaseService.name);
+  private readonly CHEF_PROFIT_RATE = 0.8;
+  private readonly ADMIN_PROFIT_RATE = 0.2;
   private stripe: Stripe;
 
   constructor(
@@ -176,7 +180,6 @@ export class CookbookPurchaseService {
     chefId: string,
     period: string = 'lifetime',
   ) {
-    const CHEF_PROFIT_RATE = 0.8;
 
     const now = new Date();
     let dateFrom: Date | undefined;
@@ -248,7 +251,7 @@ export class CookbookPurchaseService {
 
     const totalEarned = (totals[0]?.totalEarned as number) ?? 0;
     const totalOrders = (totals[0]?.totalOrders as number) ?? 0;
-    const totalProfit = parseFloat((totalEarned * CHEF_PROFIT_RATE).toFixed(2));
+    const totalProfit = parseFloat((totalEarned * this.CHEF_PROFIT_RATE).toFixed(2));
 
     return {
       success: true,
@@ -257,7 +260,7 @@ export class CookbookPurchaseService {
       data: {
         totalEarned: parseFloat(totalEarned.toFixed(2)),
         totalProfit,
-        profitRate: `${CHEF_PROFIT_RATE * 100}%`,
+        profitRate: `${this.CHEF_PROFIT_RATE * 100}%`,
         totalOrders,
         period,
         salesGraph: salesByDate,
@@ -266,7 +269,6 @@ export class CookbookPurchaseService {
   }
 
   async getChefDashboardEarnings(chefId: string) {
-    const CHEF_PROFIT_RATE = 0.8;
     const chefOid = new Types.ObjectId(chefId);
 
     const [totals, recentOrders, topCookbooks] = await Promise.all([
@@ -325,7 +327,7 @@ export class CookbookPurchaseService {
       message: 'Chef dashboard earnings retrieved',
       data: {
         totalRevenue: parseFloat(totalRevenue.toFixed(2)),
-        totalProfit: parseFloat((totalRevenue * CHEF_PROFIT_RATE).toFixed(2)),
+        totalProfit: parseFloat((totalRevenue * this.CHEF_PROFIT_RATE).toFixed(2)),
         totalOrders,
         recentOrders,
         topCookbooks: topCookbooks.map((c) => ({
@@ -337,7 +339,6 @@ export class CookbookPurchaseService {
   }
 
   async getAdminEarningsAnalytics() {
-    const ADMIN_PROFIT_RATE = 0.2;
 
     const [totals, salesByDate, top3MostSoldCookbooks] = await Promise.all([
       this.purchaseModel.aggregate([
@@ -393,7 +394,7 @@ export class CookbookPurchaseService {
     const totalRevenue = (totals[0]?.totalRevenue as number) ?? 0;
     const totalOrders = (totals[0]?.totalOrders as number) ?? 0;
     const totalProfit = parseFloat(
-      (totalRevenue * ADMIN_PROFIT_RATE).toFixed(2),
+      (totalRevenue * this.ADMIN_PROFIT_RATE).toFixed(2),
     );
 
     return {
@@ -403,7 +404,7 @@ export class CookbookPurchaseService {
       data: {
         totalRevenue: parseFloat(totalRevenue.toFixed(2)),
         totalProfit,
-        profitRate: `${ADMIN_PROFIT_RATE * 100}%`,
+        profitRate: `${this.ADMIN_PROFIT_RATE * 100}%`,
         totalOrders,
         salesGraph: salesByDate,
         top3MostSoldCookbooks,
@@ -470,12 +471,12 @@ export class CookbookPurchaseService {
     const { cookbookId, buyerId, receiptEmail, billingAddress } =
       session.metadata as Record<string, string>;
 
-    console.log({ cookbookId, buyerId, receiptEmail, billingAddress });
-
-    const cookbook = await this.cookbookModel.findById(cookbookId);
+    const cookbook = await this.cookbookModel.findOneAndUpdate(
+      { _id: cookbookId, stockCount: { $gt: 0 } },
+      { $inc: { stockCount: -1 } },
+      { new: true },
+    );
     if (!cookbook) return;
-    cookbook.stockCount = Math.max(cookbook.stockCount - 1, 0);
-    await cookbook.save();
 
     await this.purchaseModel.create({
       cookbookId: new Types.ObjectId(cookbookId),

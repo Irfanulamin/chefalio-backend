@@ -101,7 +101,7 @@ export class UserService {
     dto: UpdateUserDto,
     image?: Express.Multer.File,
   ) {
-    if (!dto && !image) {
+    if (!Object.keys(dto).length && !image) {
       throw new BadRequestException('No data provided for update');
     }
 
@@ -200,7 +200,7 @@ export class UserService {
         user._id,
         { [idField]: data.providerId },
         { new: true },
-      ) as any;
+      );
     }
 
     const base = data.fullName
