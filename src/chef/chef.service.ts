@@ -25,12 +25,45 @@ export class ChefService {
     }
 
     const [data, total] = await Promise.all([
-      this.userModel
-        .find(filter)
-        .select('-password -__v -createdAt -updatedAt -isActive')
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .sort({ createdAt: 1 }),
+      this.userModel.aggregate([
+        { $match: filter },
+        { $sort: { createdAt: 1 } },
+        { $skip: (page - 1) * limit },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: 'recipes',
+            localField: '_id',
+            foreignField: 'authorId',
+            as: '_recipes',
+          },
+        },
+        {
+          $lookup: {
+            from: 'cookbooks',
+            localField: '_id',
+            foreignField: 'authorId',
+            as: '_cookbooks',
+          },
+        },
+        {
+          $addFields: {
+            recipeCount: { $size: '$_recipes' },
+            cookbookCount: { $size: '$_cookbooks' },
+          },
+        },
+        {
+          $project: {
+            password: 0,
+            __v: 0,
+            createdAt: 0,
+            updatedAt: 0,
+            isActive: 0,
+            _recipes: 0,
+            _cookbooks: 0,
+          },
+        },
+      ]),
       this.userModel.countDocuments(filter),
     ]);
 

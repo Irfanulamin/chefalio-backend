@@ -61,6 +61,7 @@ export class RecipeService {
     tags: string,
     difficulty: string,
     author: string,
+    sort: string = 'newest',
   ) {
     const filter: Record<string, any> = {};
 
@@ -104,13 +105,20 @@ export class RecipeService {
       filter.authorId = authorUser._id;
     }
 
+    const sortOrder: Record<string, any> =
+      sort === 'trending'
+        ? { lovedCount: -1, savedCount: -1 }
+        : sort === 'popular'
+          ? { savedCount: -1, lovedCount: -1 }
+          : { createdAt: -1 };
+
     const [recipes, total] = await Promise.all([
       this.recipeModel
         .find(filter)
         .populate('authorId', 'fullName username email profile_url')
         .skip((page - 1) * limit)
         .limit(limit)
-        .sort({ createdAt: -1 }),
+        .sort(sortOrder),
       this.recipeModel.countDocuments(filter),
     ]);
 

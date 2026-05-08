@@ -64,6 +64,7 @@ export class RecipeController {
     @Query('tags') tags: string,
     @Query('difficulty') difficulty: string,
     @Query('author') author: string,
+    @Query('sort') sort: string,
   ) {
     return this.recipeService.getAllRecipes(
       page,
@@ -72,6 +73,7 @@ export class RecipeController {
       tags,
       difficulty,
       author,
+      sort,
     );
   }
 
