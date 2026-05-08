@@ -2,7 +2,6 @@
   "compilerOptions": {
     "module": "commonjs",
     "moduleResolution": "node",
-    "ignoreDeprecations": "6.0",
     "types": ["node", "multer"],
     "esModuleInterop": true,
     "declaration": true,
