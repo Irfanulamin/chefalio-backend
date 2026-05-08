@@ -340,6 +340,50 @@ export class CookbookPurchaseService {
     };
   }
 
+  async getAdminTopChefs() {
+    const topChefs = await this.purchaseModel.aggregate([
+      { $match: { paymentStatus: 'paid' } },
+      {
+        $group: {
+          _id: '$chefId',
+          totalRevenue: { $sum: '$price' },
+          totalSales: { $sum: 1 },
+        },
+      },
+      { $sort: { totalRevenue: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'chefInfo',
+        },
+      },
+      { $unwind: '$chefInfo' },
+      {
+        $project: {
+          _id: 0,
+          chefId: '$_id',
+          fullName: '$chefInfo.fullName',
+          username: '$chefInfo.username',
+          profileUrl: '$chefInfo.profile_url',
+          totalRevenue: 1,
+          totalSales: 1,
+        },
+      },
+    ]);
+
+    return {
+      success: true,
+      statusCode: 200,
+      data: topChefs.map((c) => ({
+        ...c,
+        totalRevenue: parseFloat((c.totalRevenue as number).toFixed(2)),
+      })),
+    };
+  }
+
   async confirmPayment(session: Stripe.Checkout.Session): Promise<void> {
     if (session.payment_status !== 'paid') {
       return;

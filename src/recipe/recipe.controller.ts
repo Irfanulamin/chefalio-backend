@@ -89,6 +89,13 @@ export class RecipeController {
     return this.recipeService.getDashboardAnalytics();
   }
 
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  @Get('/admin/upload-trend')
+  async getAdminUploadTrend() {
+    return this.recipeService.getAdminUploadTrend();
+  }
+
   @UseGuards(AuthGuard)
   @Get(':id')
   async getRecipeById(@Param('id', ParseObjectIdPipe) id: string) {

@@ -124,6 +124,13 @@ export class CookbookPurchaseController {
     return this.cookbookPurchaseService.getAdminEarningsAnalytics();
   }
 
+  @Get('analytics/admin/top-chefs')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  async getAdminTopChefs() {
+    return this.cookbookPurchaseService.getAdminTopChefs();
+  }
+
   @Patch('update-payment-status/:purchaseId')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)

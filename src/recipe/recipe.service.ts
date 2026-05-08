@@ -323,4 +323,27 @@ export class RecipeService {
       },
     };
   }
+
+  async getAdminUploadTrend() {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const trend = await this.recipeModel.aggregate([
+      { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+      { $project: { _id: 0, date: '$_id', count: 1 } },
+    ]);
+
+    return {
+      success: true,
+      statusCode: 200,
+      data: trend,
+    };
+  }
 }
