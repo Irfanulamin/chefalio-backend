@@ -196,9 +196,11 @@ export class UserService {
 
     user = await this.userModel.findOne({ email: data.email });
     if (user) {
-      (user as any)[idField] = data.providerId;
-      await user.save();
-      return user;
+      return this.userModel.findByIdAndUpdate(
+        user._id,
+        { [idField]: data.providerId },
+        { new: true },
+      ) as any;
     }
 
     const base = data.fullName

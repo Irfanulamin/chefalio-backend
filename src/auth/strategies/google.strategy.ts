@@ -31,14 +31,18 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     profile: any,
     done: VerifyCallback,
   ) {
-    const { id, displayName, emails, photos } = profile;
-    const user = await this.userService.findOrCreateOAuthUser({
-      provider: 'google',
-      providerId: id,
-      email: emails[0].value,
-      fullName: displayName,
-      profile_url: photos?.[0]?.value,
-    });
-    done(null, user);
+    try {
+      const { id, displayName, emails, photos } = profile;
+      const user = await this.userService.findOrCreateOAuthUser({
+        provider: 'google',
+        providerId: id,
+        email: emails[0].value,
+        fullName: displayName,
+        profile_url: photos?.[0]?.value,
+      });
+      done(null, user);
+    } catch (err) {
+      done(err as Error, undefined);
+    }
   }
 }

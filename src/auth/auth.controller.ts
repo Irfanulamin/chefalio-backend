@@ -51,8 +51,9 @@ export class AuthController {
 
   @Post('/logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('access_token');
-    res.clearCookie('logged_in');
+    const clearOpts = { httpOnly: true, secure: true, sameSite: 'none' as const };
+    res.clearCookie('access_token', clearOpts);
+    res.clearCookie('logged_in', { ...clearOpts, httpOnly: false });
     return {
       success: true,
       statusCode: 200,
@@ -93,7 +94,7 @@ export class AuthController {
   }
 
   @Get('/google')
-  @UseGuards(PassportAuthGuard('google'))
+  @UseGuards(AlreadyLoggedInGuard, PassportAuthGuard('google'))
   googleAuth() {}
 
   @Get('/google/callback')
