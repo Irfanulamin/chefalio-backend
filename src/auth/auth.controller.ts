@@ -51,9 +51,7 @@ export class AuthController {
 
   @Post('/logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    const clearOpts = { httpOnly: true, secure: true, sameSite: 'none' as const };
-    res.clearCookie('access_token', clearOpts);
-    res.clearCookie('logged_in', { ...clearOpts, httpOnly: false });
+    res.clearCookie('access_token', { httpOnly: true, secure: true, sameSite: 'none' as const });
     return {
       success: true,
       statusCode: 200,

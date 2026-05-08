@@ -42,9 +42,7 @@ export class AuthService {
     const payload = { sub: user._id, role: user.role };
     const token = await this.jwtService.signAsync(payload);
 
-    const cookieOpts = { httpOnly: true, secure: true, sameSite: 'none' as const, maxAge: 3600000 };
-    res.cookie('access_token', token, cookieOpts);
-    res.cookie('logged_in', 'true', { ...cookieOpts, httpOnly: false });
+    res.cookie('access_token', token, { httpOnly: true, secure: true, sameSite: 'none' as const, maxAge: 3600000 });
 
     return {
       success: true,
@@ -79,9 +77,7 @@ export class AuthService {
     const payload = { sub: user._id, role: user.role };
     const token = await this.jwtService.signAsync(payload);
 
-    const cookieOpts = { httpOnly: true, secure: true, sameSite: 'none' as const, maxAge: 3600000 };
-    res.cookie('access_token', token, cookieOpts);
-    res.cookie('logged_in', 'true', { ...cookieOpts, httpOnly: false });
+    res.cookie('access_token', token, { httpOnly: true, secure: true, sameSite: 'none' as const, maxAge: 3600000 });
 
     return {
       success: true,
@@ -195,9 +191,7 @@ export class AuthService {
     const payload = { sub: user._id, role: user.role };
     const token = await this.jwtService.signAsync(payload);
 
-    const cookieOpts = { httpOnly: true, secure: true, sameSite: 'none' as const, maxAge: 3600000 };
-    res.cookie('access_token', token, cookieOpts);
-    res.cookie('logged_in', 'true', { ...cookieOpts, httpOnly: false });
+    res.cookie('access_token', token, { httpOnly: true, secure: true, sameSite: 'none' as const, maxAge: 3600000 });
 
     const redirectPath =
       user.role === 'chef'
