@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   DefaultValuePipe,
+  Delete,
   Get,
   HttpStatus,
   Param,
@@ -97,5 +98,12 @@ export class UserController {
   @Get('/:id')
   getUser(@Param('id', ParseObjectIdPipe) id: string) {
     return this.userService.getUserById(id);
+  }
+
+  @Delete('/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  deleteUser(@Param('id', ParseObjectIdPipe) id: string) {
+    return this.userService.deleteUser(id);
   }
 }

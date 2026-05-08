@@ -30,8 +30,8 @@ export class CreateUserDto {
 
   @IsString()
   @IsNotEmpty()
-  @IsIn(['user', 'chef'], {
-    message: 'Role must be either user or chef',
+  @IsIn(['user', 'chef', 'admin'], {
+    message: 'Role must be user, chef, or admin',
   })
   role!: string;
 }

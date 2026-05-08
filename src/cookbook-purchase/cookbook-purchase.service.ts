@@ -84,6 +84,40 @@ export class CookbookPurchaseService {
     };
   }
 
+  async getAllOrdersAdmin(
+    page: number,
+    limit: number,
+    search: string,
+    status: string,
+  ) {
+    const filter: Record<string, any> = {};
+    if (status) filter.paymentStatus = status;
+    if (search) {
+      filter.$or = [
+        { cookbookTitle: { $regex: search, $options: 'i' } },
+        { receiptEmail: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      this.purchaseModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .select('-__v')
+        .lean(),
+      this.purchaseModel.countDocuments(filter),
+    ]);
+
+    return {
+      success: true,
+      message: 'All orders retrieved',
+      data,
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
   async getUserPurchases(userId: string) {
     const query = { buyerId: new Types.ObjectId(userId) };
     const data = await this.purchaseModel

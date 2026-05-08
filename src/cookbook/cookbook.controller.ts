@@ -119,6 +119,16 @@ export class CookbookController {
     );
   }
 
+  @Patch('admin/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  adminUpdate(
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Body() dto: { price?: number; stockCount?: number; title?: string; description?: string },
+  ) {
+    return this.cookbookService.adminUpdate(id, dto);
+  }
+
   @Delete(':id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef, Role.Admin)

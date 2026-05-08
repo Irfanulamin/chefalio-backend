@@ -184,6 +184,18 @@ export class CookbookService {
     };
   }
 
+  async adminUpdate(
+    id: string,
+    dto: { price?: number; stockCount?: number; title?: string; description?: string },
+  ) {
+    const cookbook = await this.cookbookModel.findById(id);
+    if (!cookbook) throw new NotFoundException('Cookbook not found');
+    const updated = await this.cookbookModel
+      .findByIdAndUpdate(id, { $set: dto }, { new: true })
+      .populate('authorId', 'fullName username email profile_url');
+    return { success: true, message: 'Cookbook updated', data: updated };
+  }
+
   async remove(
     id: string,
     userId: string,

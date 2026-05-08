@@ -9,6 +9,8 @@ import {
   Param,
   BadRequestException,
   Query,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { CookbookPurchaseService } from './cookbook-purchase.service';
 import { CreateCookbookPurchaseDto } from './dto/create-cookbook-purchase.dto';
@@ -101,6 +103,18 @@ export class CookbookPurchaseController {
       req.user.sub,
       period,
     );
+  }
+
+  @Get('admin/orders')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  async getAllOrdersAdmin(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('search') search: string = '',
+    @Query('status') status: string = '',
+  ) {
+    return this.cookbookPurchaseService.getAllOrdersAdmin(page, limit, search, status);
   }
 
   @Get('analytics/admin')

@@ -228,6 +228,17 @@ export class UserService {
     });
   }
 
+  async deleteUser(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+    if (user.profile_url) {
+      const publicId = this.cloudinaryService.getCloudinaryPublicId(user.profile_url);
+      if (publicId) await this.cloudinaryService.deleteImage(publicId);
+    }
+    await this.userModel.findByIdAndDelete(userId);
+    return { success: true, message: 'User deleted successfully' };
+  }
+
   async getUserAnalytics() {
     const [roleCounts, activeCounts, recentJoined] = await Promise.all([
       this.userModel.aggregate([
