@@ -52,6 +52,7 @@ export class AuthController {
   @Post('/logout')
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('access_token');
+    res.clearCookie('logged_in');
     return {
       success: true,
       statusCode: 200,
