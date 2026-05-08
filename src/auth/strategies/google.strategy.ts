@@ -18,8 +18,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         'http://localhost:5000/auth/google/callback',
       ),
       scope: ['email', 'profile'],
-      prompt: 'select_account',
     });
+  }
+
+  authenticate(req: any, options?: any) {
+    return super.authenticate(req, { ...options, prompt: 'select_account' });
   }
 
   async validate(
