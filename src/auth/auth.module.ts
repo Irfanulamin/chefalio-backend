@@ -11,7 +11,8 @@ import { User, UserSchema } from '../user/schema/user.schema';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PassportModule } from '@nestjs/passport';
 import { GoogleStrategy } from './strategies/google.strategy';
-import { FacebookStrategy } from './strategies/facebook.strategy';
+import { AlreadyLoggedInGuard } from './already-logged-in.guard';
+import { GoogleOAuthGuard } from './google-oauth.guard';
 
 @Module({
   imports: [
@@ -36,8 +37,9 @@ import { FacebookStrategy } from './strategies/facebook.strategy';
   providers: [
     AuthService,
     MailService,
+    AlreadyLoggedInGuard,
+    GoogleOAuthGuard,
     ...(process.env.GOOGLE_CLIENT_ID ? [GoogleStrategy] : []),
-    ...(process.env.FACEBOOK_APP_ID ? [FacebookStrategy] : []),
   ],
   exports: [JwtModule],
 })

@@ -183,13 +183,13 @@ export class UserService {
   }
 
   async findOrCreateOAuthUser(data: {
-    provider: 'google' | 'facebook';
+    provider: 'google';
     providerId: string;
     email: string;
     fullName: string;
     profile_url?: string;
   }) {
-    const idField = data.provider === 'google' ? 'googleId' : 'facebookId';
+    const idField = 'googleId';
 
     let user = await this.userModel.findOne({ [idField]: data.providerId });
     if (user) return user;

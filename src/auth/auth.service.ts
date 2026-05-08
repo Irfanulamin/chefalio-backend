@@ -189,6 +189,15 @@ export class AuthService {
   }
 
   async oauthLogin(user: any, res: Response) {
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
+
+    if (!user.isActive) {
+      return res.redirect(`${frontendUrl}/login?error=account_deactivated`);
+    }
+
     const payload = { sub: user._id, role: user.role };
     const token = await this.jwtService.signAsync(payload);
 
@@ -199,11 +208,12 @@ export class AuthService {
       maxAge: 3600000,
     });
 
-    const frontendUrl = this.configService.get<string>(
-      'FRONTEND_URL',
-      'http://localhost:3000',
-    );
-    const redirectPath = user.role === 'chef' ? '/chef/dashboard' : '/recipes';
+    const redirectPath =
+      user.role === 'chef'
+        ? '/chef/dashboard'
+        : user.role === 'admin'
+          ? '/admin/dashboard'
+          : '/recipes';
     res.redirect(`${frontendUrl}${redirectPath}`);
   }
 }

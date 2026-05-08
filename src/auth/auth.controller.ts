@@ -17,11 +17,14 @@ import { ChangePasswordDto } from './dto/changePassword.dto';
 import type { Response } from 'express';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
+import { AlreadyLoggedInGuard } from './already-logged-in.guard';
+import { GoogleOAuthGuard } from './google-oauth.guard';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @UseGuards(AlreadyLoggedInGuard)
   @Post('/register')
   async register(
     @Body() registerUserDto: RegisterUserDto,
@@ -31,7 +34,7 @@ export class AuthController {
   }
 
   @Throttle({ default: { ttl: 60000, limit: 5 } })
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(AlreadyLoggedInGuard, ThrottlerGuard)
   @Post('/login')
   async login(
     @Body() loginUserDto: LoginUserDto,
@@ -68,14 +71,14 @@ export class AuthController {
   }
 
   @Throttle({ default: { ttl: 60000, limit: 3 } })
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(AlreadyLoggedInGuard, ThrottlerGuard)
   @Post('/forgot-password')
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return await this.authService.forgotPassword(forgotPasswordDto);
   }
 
   @Throttle({ default: { ttl: 60000, limit: 5 } })
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(AlreadyLoggedInGuard, ThrottlerGuard)
   @Post('/reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return await this.authService.resetPassword(resetPasswordDto);
@@ -93,18 +96,13 @@ export class AuthController {
   googleAuth() {}
 
   @Get('/google/callback')
-  @UseGuards(PassportAuthGuard('google'))
+  @UseGuards(GoogleOAuthGuard)
   async googleCallback(@Request() req, @Res() res: Response) {
+    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+    if (!req.user) {
+      return res.redirect(`${frontendUrl}/login?error=oauth_failed`);
+    }
     return this.authService.oauthLogin(req.user, res);
   }
 
-  @Get('/facebook')
-  @UseGuards(PassportAuthGuard('facebook'))
-  facebookAuth() {}
-
-  @Get('/facebook/callback')
-  @UseGuards(PassportAuthGuard('facebook'))
-  async facebookCallback(@Request() req, @Res() res: Response) {
-    return this.authService.oauthLogin(req.user, res);
-  }
 }

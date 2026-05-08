@@ -29,14 +29,11 @@ export class User {
   @Prop({ default: true, required: true })
   isActive!: boolean;
 
-  @Prop({ default: 'local', enum: ['local', 'google', 'facebook'] })
-  authProvider!: 'local' | 'google' | 'facebook';
+  @Prop({ default: 'local', enum: ['local', 'google'] })
+  authProvider!: 'local' | 'google';
 
   @Prop({ sparse: true })
   googleId?: string;
-
-  @Prop({ sparse: true })
-  facebookId?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
