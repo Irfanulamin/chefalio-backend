@@ -119,12 +119,19 @@ export class CookbookController {
     );
   }
 
+  @Patch('admin/discount/global')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.Admin)
+  applyGlobalDiscount(@Body('discount') discount: number) {
+    return this.cookbookService.applyGlobalDiscount(discount);
+  }
+
   @Patch('admin/:id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
   adminUpdate(
     @Param('id', ParseObjectIdPipe) id: string,
-    @Body() dto: { price?: number; stockCount?: number; title?: string; description?: string },
+    @Body() dto: { price?: number; stockCount?: number; discount?: number; title?: string; description?: string },
   ) {
     return this.cookbookService.adminUpdate(id, dto);
   }

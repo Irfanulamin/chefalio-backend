@@ -184,9 +184,17 @@ export class CookbookService {
     };
   }
 
+  async applyGlobalDiscount(discount: number) {
+    await this.cookbookModel.updateMany({}, { $set: { discount } });
+    return {
+      success: true,
+      message: `Global discount of ${discount}% applied to all cookbooks`,
+    };
+  }
+
   async adminUpdate(
     id: string,
-    dto: { price?: number; stockCount?: number; title?: string; description?: string },
+    dto: { price?: number; stockCount?: number; discount?: number; title?: string; description?: string },
   ) {
     const cookbook = await this.cookbookModel.findById(id);
     if (!cookbook) throw new NotFoundException('Cookbook not found');

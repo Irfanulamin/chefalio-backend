@@ -25,6 +25,9 @@ export class Cookbook {
 
   @Prop({ required: true, min: 0 })
   stockCount!: number;
+
+  @Prop({ type: Number, min: 0, max: 15, default: 0 })
+  discount!: number;
 }
 
 export const CookbookSchema = SchemaFactory.createForClass(Cookbook);
