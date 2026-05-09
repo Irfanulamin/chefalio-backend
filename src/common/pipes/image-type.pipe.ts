@@ -6,9 +6,9 @@ export class ImageTypePipe implements PipeTransform {
   async transform(file: Express.Multer.File | undefined) {
     if (!file) return file;
     const type = await fileTypeFromBuffer(file.buffer);
-    const allowed = ['image/jpeg', 'image/png'];
-    if (!type || !allowed.includes(type.mime)) {
-      throw new BadRequestException('Only JPEG and PNG images are allowed');
+    const allowed = /^image\//;
+    if (!type || !allowed.test(type.mime)) {
+      throw new BadRequestException('Only image files are allowed');
     }
     return file;
   }

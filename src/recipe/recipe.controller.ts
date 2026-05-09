@@ -39,7 +39,7 @@ export class RecipeController {
     @UploadedFiles(
       new ParseFilePipeBuilder()
         .addFileTypeValidator({
-          fileType: '.(jpg|jpeg|png)',
+          fileType: 'image/.*',
         })
         .addMaxSizeValidator({
           maxSize: 5 * 1024 * 1024,
@@ -135,7 +135,7 @@ export class RecipeController {
     @UploadedFiles(
       new ParseFilePipeBuilder()
         .addFileTypeValidator({
-          fileType: '.(jpg|jpeg|png)',
+          fileType: 'image/.*',
         })
         .addMaxSizeValidator({
           maxSize: 5 * 1024 * 1024,
