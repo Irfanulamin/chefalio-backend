@@ -38,9 +38,6 @@ export class CookbookController {
     @Body() dto: CreateCookbookDto,
     @UploadedFile(
       new ParseFilePipeBuilder()
-        .addFileTypeValidator({
-          fileType: '.(jpg|jpeg|png)',
-        })
         .addMaxSizeValidator({
           maxSize: 5 * 1024 * 1024,
           message: 'Each image must be under 5MB',
@@ -97,9 +94,6 @@ export class CookbookController {
     @Body() updateCookbookDto: UpdateCookbookDto,
     @UploadedFile(
       new ParseFilePipeBuilder()
-        .addFileTypeValidator({
-          fileType: '.(jpg|jpeg|png)',
-        })
         .addMaxSizeValidator({
           maxSize: 5 * 1024 * 1024,
           message: 'Each image must be under 5MB',

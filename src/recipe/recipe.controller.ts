@@ -38,9 +38,6 @@ export class RecipeController {
     @Body() dto: CreateRecipeDto,
     @UploadedFiles(
       new ParseFilePipeBuilder()
-        .addFileTypeValidator({
-          fileType: 'image/.*',
-        })
         .addMaxSizeValidator({
           maxSize: 5 * 1024 * 1024,
           message: 'Each image must be under 5MB',
@@ -134,9 +131,6 @@ export class RecipeController {
     @Req() req: Request & { user: { sub: string } },
     @UploadedFiles(
       new ParseFilePipeBuilder()
-        .addFileTypeValidator({
-          fileType: 'image/.*',
-        })
         .addMaxSizeValidator({
           maxSize: 5 * 1024 * 1024,
           message: 'Each image must be under 5MB',
