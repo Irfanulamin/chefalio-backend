@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { User } from '../user/schema/user.schema';
 import { Recipe } from '../recipe/schemas/recipe.schema';
 import { Cookbook } from '../cookbook/schemas/cookbook.schema';
+import { ChefProfile } from '../chef-profile/schemas/chef-profile.schema';
 
 @Injectable()
 export class ChefService {
@@ -11,6 +12,7 @@ export class ChefService {
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Recipe.name) private recipeModel: Model<Recipe>,
     @InjectModel(Cookbook.name) private cookbookModel: Model<Cookbook>,
+    @InjectModel(ChefProfile.name) private chefProfileModel: Model<ChefProfile>,
   ) {}
 
   // GET /chefs — all chefs (paginated + optional search)
@@ -95,7 +97,7 @@ export class ChefService {
     };
   }
 
-  // GET /chefs/:id — single chef profile
+  // GET /chefs/:id — single chef profile with extended profile data
   async getChefById(id: string) {
     const chef = await this.userModel
       .findOne({ _id: id, role: 'chef', isActive: true })
@@ -105,11 +107,15 @@ export class ChefService {
       throw new NotFoundException('Chef not found');
     }
 
+    const profile = await this.chefProfileModel
+      .findOne({ chefId: chef._id })
+      .select('-__v -createdAt -updatedAt');
+
     return {
       success: true,
       statusCode: 200,
       message: 'Chef retrieved successfully',
-      data: chef,
+      data: { ...chef.toObject(), profile: profile?.toObject() ?? null },
     };
   }
 
