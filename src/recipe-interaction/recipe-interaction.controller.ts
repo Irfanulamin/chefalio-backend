@@ -14,6 +14,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Role, Roles } from '../auth/roles.decorator';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { BatchStatsDto } from './dto/batch-stats.dto';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('recipe-interaction')
 export class RecipeInteractionController {
@@ -21,8 +22,9 @@ export class RecipeInteractionController {
     private readonly recipeInteractionService: RecipeInteractionService,
   ) {}
 
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.User)
+  @Roles(Role.User, Role.Chef)
   @Post('/save/:recipeId')
   toggleSave(
     @Param('recipeId', ParseObjectIdPipe) recipeId: string,
@@ -31,8 +33,9 @@ export class RecipeInteractionController {
     return this.recipeInteractionService.toggleSave(req.user.sub, recipeId);
   }
 
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.User)
+  @Roles(Role.User, Role.Chef)
   @Post('/love/:recipeId')
   toggleLove(
     @Param('recipeId', ParseObjectIdPipe) recipeId: string,
@@ -42,14 +45,14 @@ export class RecipeInteractionController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.User)
+  @Roles(Role.User, Role.Chef)
   @Get('/saved')
   getSavedRecipes(@Req() req: Request & { user: { sub: string } }) {
     return this.recipeInteractionService.getSavedRecipes(req.user.sub);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.User)
+  @Roles(Role.User, Role.Chef)
   @Get('/loved')
   getLovedRecipes(@Req() req: Request & { user: { sub: string } }) {
     return this.recipeInteractionService.getLovedRecipes(req.user.sub);
@@ -72,9 +75,8 @@ export class RecipeInteractionController {
     return this.recipeInteractionService.getAdminStats();
   }
 
-  // ── Kept for the single recipe detail page ────────────────────────────────
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.User)
+  @Roles(Role.User, Role.Chef)
   @Get('/stats/:recipeId')
   getRecipeStats(
     @Param('recipeId', ParseObjectIdPipe) recipeId: string,
@@ -86,12 +88,8 @@ export class RecipeInteractionController {
     );
   }
 
-  // ── NEW: One request for the whole page of recipes ────────────────────────
-  // POST /recipe-interaction/stats/batch
-  // Body: { recipeIds: string[] }
-  // Returns: { [recipeId]: { isSaved: boolean, isLoved: boolean } }
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.User)
+  @Roles(Role.User, Role.Chef)
   @Post('/stats/batch')
   getBatchStats(
     @Body() dto: BatchStatsDto,

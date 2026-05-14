@@ -36,6 +36,12 @@ export class CookbookPurchaseService {
     });
   }
 
+  private startOfUTCDay(): Date {
+    const d = new Date();
+    d.setUTCHours(0, 0, 0, 0);
+    return d;
+  }
+
   async createCheckoutSession(userId: string, dto: CreateCookbookPurchaseDto) {
     const cookbook = await this.cookbookModel.findById(dto.cookbookId);
 
@@ -49,6 +55,16 @@ export class CookbookPurchaseService {
 
     if (cookbook.stockCount <= 0) {
       throw new ForbiddenException('Cookbook is out of stock');
+    }
+
+    const todayPurchases = await this.purchaseModel.countDocuments({
+      buyerId: new Types.ObjectId(userId),
+      createdAt: { $gte: this.startOfUTCDay() },
+    });
+    if (todayPurchases >= 5) {
+      throw new ForbiddenException(
+        'Daily limit reached: you may purchase at most 5 cookbooks per day',
+      );
     }
 
     const session = await this.stripe.checkout.sessions.create({
@@ -470,6 +486,17 @@ export class CookbookPurchaseService {
 
     const { cookbookId, buyerId, receiptEmail, billingAddress } =
       session.metadata as Record<string, string>;
+
+    const todayPurchases = await this.purchaseModel.countDocuments({
+      buyerId: new Types.ObjectId(buyerId),
+      createdAt: { $gte: this.startOfUTCDay() },
+    });
+    if (todayPurchases >= 5) {
+      this.logger.warn(
+        `Daily purchase limit exceeded for user ${buyerId} — skipping fulfillment`,
+      );
+      return;
+    }
 
     const cookbook = await this.cookbookModel.findOneAndUpdate(
       { _id: cookbookId, stockCount: { $gt: 0 } },

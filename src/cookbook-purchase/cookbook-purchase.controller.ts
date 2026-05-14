@@ -13,6 +13,7 @@ import {
   DefaultValuePipe,
   ParseIntPipe,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { CookbookPurchaseService } from './cookbook-purchase.service';
 import { CreateCookbookPurchaseDto } from './dto/create-cookbook-purchase.dto';
 import { AuthGuard } from '../auth/auth.guard';
@@ -36,6 +37,7 @@ export class CookbookPurchaseController {
     this.stripe = new Stripe(this.config.getOrThrow('STRIPE_SECRET_KEY'));
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(AuthGuard)
   @Post('payment')
   async purchaseCookbook(

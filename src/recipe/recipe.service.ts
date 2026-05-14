@@ -36,6 +36,18 @@ export class RecipeService {
       throw new BadRequestException('Exactly 3 images are required');
     }
 
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const todayCount = await this.recipeModel.countDocuments({
+      authorId: new Types.ObjectId(userId),
+      createdAt: { $gte: startOfDay },
+    });
+    if (todayCount >= 3) {
+      throw new ForbiddenException(
+        'Daily limit reached: chefs may create at most 3 recipes per day',
+      );
+    }
+
     const imageUrls = await Promise.all(
       images.map((file) =>
         this.cloudinaryService.uploadImage(file, 'recipe_images'),

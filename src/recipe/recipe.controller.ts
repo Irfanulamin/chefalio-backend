@@ -24,12 +24,14 @@ import { Role, Roles } from '../auth/roles.decorator';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('recipes')
 export class RecipeController {
   constructor(private readonly recipeService: RecipeService) {}
 
   @Post('create')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Chef)
   @UseInterceptors(FilesInterceptor('images', 3))

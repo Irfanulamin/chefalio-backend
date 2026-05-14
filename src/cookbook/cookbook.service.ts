@@ -31,6 +31,18 @@ export class CookbookService {
       throw new NotFoundException('User not found');
     }
 
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const todayCount = await this.cookbookModel.countDocuments({
+      authorId: new Types.ObjectId(userId),
+      createdAt: { $gte: startOfDay },
+    });
+    if (todayCount >= 2) {
+      throw new ForbiddenException(
+        'Daily limit reached: chefs may create at most 2 cookbooks per day',
+      );
+    }
+
     const cookbook_image = await this.cloudinaryService.uploadImage(image);
 
     const cookbook = await this.cookbookModel.create({

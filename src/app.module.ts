@@ -16,6 +16,7 @@ import { ChefModule } from './chef/chef.module';
 import { ChefProfileModule } from './chef-profile/chef-profile.module';
 import { AiModule } from './ai/ai.module';
 import { NotificationModule } from './notifications/notification.module';
+import { ChefApplicationModule } from './chef-application/chef-application.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { NotificationModule } from './notifications/notification.module';
     ChefProfileModule,
     AiModule,
     NotificationModule,
+    ChefApplicationModule,
   ],
   controllers: [AppController],
   providers: [
