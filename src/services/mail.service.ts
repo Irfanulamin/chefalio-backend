@@ -71,6 +71,60 @@ export class MailService {
     }
   }
 
+  async sendVerificationEmail(
+    to: string,
+    fullName: string,
+    verificationLink: string,
+  ) {
+    try {
+      await this.resend.emails.send({
+        from: 'Chefalio Support <no-reply@chefalio.xyz>',
+        to,
+        subject: 'Verify Your Email Address',
+        html: `
+<div style="font-family: Arial, Helvetica, sans-serif; background-color:#f4f6f8; padding:40px 0;">
+  <div style="max-width:600px; margin:auto; background:#ffffff; padding:30px; border-radius:8px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
+
+    <h2 style="color:#333; margin-bottom:10px;">Welcome to Chefalio, ${fullName}!</h2>
+
+    <p style="color:#555; font-size:16px; line-height:1.6;">
+      Thanks for signing up. Please verify your email address to activate your account.
+    </p>
+
+    <a href="${verificationLink}"
+       style="display:inline-block; margin-top:20px; padding:12px 28px;
+       background-color:#2563eb; color:#ffffff; text-decoration:none;
+       border-radius:6px; font-weight:bold; font-size:15px;">
+       Verify Email Address
+    </a>
+
+    <p style="margin-top:25px; font-size:14px; color:#666;">
+      Or copy and paste this link into your browser:
+    </p>
+
+    <p style="word-break:break-all; font-size:13px;">
+      <a href="${verificationLink}" style="color:#2563eb;">${verificationLink}</a>
+    </p>
+
+    <hr style="margin:30px 0; border:none; border-top:1px solid #eee;">
+
+    <p style="font-size:13px; color:#888;">
+      This link expires in 24 hours. If you did not create an account, you can safely ignore this email.
+    </p>
+
+  </div>
+</div>
+        `,
+      });
+      this.logger.log(`Verification email sent to ${to}`);
+    } catch (error) {
+      this.logger.error(`Failed to send verification email to ${to}`, error);
+      throw new InternalServerErrorException(
+        'Failed to send verification email. Please try again.',
+      );
+    }
+  }
+
   async sendPurchaseReceipt(
     to: string,
     purchase: {

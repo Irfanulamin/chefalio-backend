@@ -14,6 +14,8 @@ import { AuthGuard } from './auth.guard';
 import { ForgotPasswordDto } from './dto/forgotPassword.dto';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { ChangePasswordDto } from './dto/changePassword.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import type { Response } from 'express';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
@@ -26,11 +28,8 @@ export class AuthController {
 
   @UseGuards(AlreadyLoggedInGuard)
   @Post('/register')
-  async register(
-    @Body() registerUserDto: RegisterUserDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    return await this.authService.userRegister(registerUserDto, res);
+  async register(@Body() registerUserDto: RegisterUserDto) {
+    return await this.authService.userRegister(registerUserDto);
   }
 
   @Throttle({ default: { ttl: 60000, limit: 5 } })
@@ -43,6 +42,23 @@ export class AuthController {
     return await this.authService.userLogin(loginUserDto, res);
   }
 
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @UseGuards(AlreadyLoggedInGuard, ThrottlerGuard)
+  @Post('/verify-email')
+  async verifyEmail(
+    @Body() dto: VerifyEmailDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return await this.authService.verifyEmail(dto, res);
+  }
+
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
+  @UseGuards(AlreadyLoggedInGuard, ThrottlerGuard)
+  @Post('/resend-verification')
+  async resendVerification(@Body() dto: ResendVerificationDto) {
+    return await this.authService.resendVerification(dto);
+  }
+
   @UseGuards(AuthGuard)
   @Get('/me')
   getMe(@Request() req) {
@@ -51,7 +67,11 @@ export class AuthController {
 
   @Post('/logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('access_token', { httpOnly: true, secure: true, sameSite: 'none' as const });
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none' as const,
+    });
     return {
       success: true,
       statusCode: 200,
@@ -104,5 +124,4 @@ export class AuthController {
     }
     return this.authService.oauthLogin(req.user, res);
   }
-
 }

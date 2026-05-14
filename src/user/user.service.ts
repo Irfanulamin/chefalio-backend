@@ -222,6 +222,7 @@ export class UserService {
       email: data.email,
       [idField]: data.providerId,
       authProvider: data.provider,
+      isEmailVerified: true,
       profile_url:
         data.profile_url ||
         'https://i.ibb.co.com/XWqvgyv/Minimalist-Avatar-Illustration.jpg',

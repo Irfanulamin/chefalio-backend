@@ -35,6 +35,9 @@ export class User {
   @Prop({ sparse: true })
   googleId?: string;
 
+  @Prop({ default: false })
+  isEmailVerified!: boolean;
+
   @Prop({ type: Date })
   notificationLastReadAt?: Date;
 }
