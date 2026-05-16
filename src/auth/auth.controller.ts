@@ -67,17 +67,23 @@ export class AuthController {
 
   @Post('/logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('access_token', {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none' as const,
-    });
+    const cookieOpts = { httpOnly: true, secure: true, sameSite: 'none' as const };
+    res.clearCookie('access_token', cookieOpts);
+    res.clearCookie('refresh_token', cookieOpts);
     return {
       success: true,
       statusCode: 200,
-      message:
-        'User logged out successfully. Please delete the token on the client side.',
+      message: 'User logged out successfully.',
     };
+  }
+
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Post('/refresh')
+  async refresh(
+    @Request() req,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.refreshToken(req, res);
   }
 
   @UseGuards(AuthGuard)

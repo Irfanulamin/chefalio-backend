@@ -20,7 +20,7 @@ import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { ChangePasswordDto } from './dto/changePassword.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import crypto from 'crypto';
 import { User } from '../user/schema/user.schema';
 import { ConfigService } from '@nestjs/config';
@@ -43,13 +43,66 @@ export class AuthService {
     return this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
   }
 
-  private setCookie(res: Response, token: string) {
-    res.cookie('access_token', token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none' as const,
-      maxAge: 3_600_000,
+  private readonly COOKIE_OPTS = {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none' as const,
+  };
+
+  private async issueTokens(
+    res: Response,
+    payload: { sub: unknown; role: string },
+  ) {
+    const accessToken = await this.jwtService.signAsync(payload, {
+      expiresIn: '15m',
     });
+    const refreshToken = await this.jwtService.signAsync(
+      { ...payload, type: 'refresh' },
+      { expiresIn: '7d' },
+    );
+
+    res.cookie('access_token', accessToken, {
+      ...this.COOKIE_OPTS,
+      maxAge: 15 * 60 * 1_000,
+    });
+    res.cookie('refresh_token', refreshToken, {
+      ...this.COOKIE_OPTS,
+      maxAge: 7 * 24 * 60 * 60 * 1_000,
+    });
+  }
+
+  async refreshToken(req: Request, res: Response) {
+    const token = req.cookies?.refresh_token as string | undefined;
+    if (!token) throw new UnauthorizedException('No refresh token');
+
+    let payload: { sub: string; role: string; type?: string };
+    try {
+      payload = await this.jwtService.verifyAsync(token, {
+        secret: process.env.JWT_SECRET,
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    if (payload.type !== 'refresh') {
+      throw new UnauthorizedException('Invalid token type');
+    }
+
+    const user = await this.userModel.findById(payload.sub);
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('User not found or inactive');
+    }
+
+    const newAccessToken = await this.jwtService.signAsync(
+      { sub: payload.sub, role: payload.role },
+      { expiresIn: '15m' },
+    );
+    res.cookie('access_token', newAccessToken, {
+      ...this.COOKIE_OPTS,
+      maxAge: 15 * 60 * 1_000,
+    });
+
+    return { success: true, statusCode: 200, message: 'Token refreshed' };
   }
 
   private async createVerificationToken(userId: Types.ObjectId): Promise<string> {
@@ -117,8 +170,7 @@ export class AuthService {
     }
 
     const payload = { sub: user._id, role: user.role };
-    const token = await this.jwtService.signAsync(payload);
-    this.setCookie(res, token);
+    await this.issueTokens(res, payload);
 
     return {
       success: true,
@@ -150,8 +202,7 @@ export class AuthService {
     if (!user) throw new BadRequestException('User not found.');
 
     const payload = { sub: user._id, role: user.role };
-    const jwtToken = await this.jwtService.signAsync(payload);
-    this.setCookie(res, jwtToken);
+    await this.issueTokens(res, payload);
 
     return {
       success: true,
@@ -284,8 +335,7 @@ export class AuthService {
     }
 
     const payload = { sub: user._id, role: user.role };
-    const token = await this.jwtService.signAsync(payload);
-    this.setCookie(res, token);
+    await this.issueTokens(res, payload);
 
     const redirectPath =
       user.role === 'chef'
