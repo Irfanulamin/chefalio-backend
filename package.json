@@ -6,12 +6,6 @@
   "private": true,
   "license": "UNLICENSED",
   "packageManager": "pnpm@11.2.2",
-  "pnpm": {
-    "overrides": {
-      "nanoid": "3"
-    },
-    "onlyBuiltDependencies": ["@nestjs/core", "@swc/core", "bcrypt", "unrs-resolver"]
-  },
   "scripts": {
     "build": "nest build",
     "vercel-build": "nest build",

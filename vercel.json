@@ -11,5 +11,10 @@
       "src": "/(.*)",
       "dest": "src/main.ts"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "ENABLE_EXPERIMENTAL_COREPACK": "1"
+    }
+  }
 }

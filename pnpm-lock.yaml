@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  nanoid: '3'
+
 importers:
 
   .:
@@ -75,7 +78,7 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       nanoid:
-        specifier: ^3.3.11
+        specifier: '3'
         version: 3.3.11
       nodemailer:
         specifier: ^8.0.1
