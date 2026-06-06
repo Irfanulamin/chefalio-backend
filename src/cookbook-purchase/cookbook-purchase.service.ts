@@ -230,7 +230,7 @@ export class CookbookPurchaseService {
         {
           $match: {
             chefId: chefOid,
-            paymentStatus: 'paid',
+            paymentStatus: { $in: ['paid', 'shipped', 'delivered'] },
             ...(dateFrom ? { createdAt: { $gte: dateFrom } } : {}),
           },
         },
@@ -247,7 +247,7 @@ export class CookbookPurchaseService {
         {
           $match: {
             chefId: chefOid,
-            paymentStatus: 'paid',
+            paymentStatus: { $in: ['paid', 'shipped', 'delivered'] },
             ...(dateFrom ? { createdAt: { $gte: dateFrom } } : {}),
           },
         },
@@ -289,7 +289,7 @@ export class CookbookPurchaseService {
 
     const [totals, recentOrders, topCookbooks] = await Promise.all([
       this.purchaseModel.aggregate([
-        { $match: { chefId: chefOid, paymentStatus: 'paid' } },
+        { $match: { chefId: chefOid, paymentStatus: { $in: ['paid', 'shipped', 'delivered'] } } },
         {
           $group: {
             _id: null,
@@ -309,7 +309,7 @@ export class CookbookPurchaseService {
         .lean(),
 
       this.purchaseModel.aggregate([
-        { $match: { chefId: chefOid, paymentStatus: 'paid' } },
+        { $match: { chefId: chefOid, paymentStatus: { $in: ['paid', 'shipped', 'delivered'] } } },
         {
           $group: {
             _id: '$cookbookId',
@@ -358,7 +358,7 @@ export class CookbookPurchaseService {
 
     const [totals, salesByDate, top3MostSoldCookbooks] = await Promise.all([
       this.purchaseModel.aggregate([
-        { $match: { paymentStatus: 'paid' } },
+        { $match: { paymentStatus: { $in: ['paid', 'shipped', 'delivered'] } } },
         {
           $group: {
             _id: null,
@@ -369,7 +369,7 @@ export class CookbookPurchaseService {
       ]),
 
       this.purchaseModel.aggregate([
-        { $match: { paymentStatus: 'paid' } },
+        { $match: { paymentStatus: { $in: ['paid', 'shipped', 'delivered'] } } },
         {
           $group: {
             _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
@@ -382,7 +382,7 @@ export class CookbookPurchaseService {
       ]),
 
       this.purchaseModel.aggregate([
-        { $match: { paymentStatus: 'paid' } },
+        { $match: { paymentStatus: { $in: ['paid', 'shipped', 'delivered'] } } },
         {
           $group: {
             _id: '$cookbookId',
@@ -430,7 +430,7 @@ export class CookbookPurchaseService {
 
   async getAdminTopChefs() {
     const topChefs = await this.purchaseModel.aggregate([
-      { $match: { paymentStatus: 'paid' } },
+      { $match: { paymentStatus: { $in: ['paid', 'shipped', 'delivered'] } } },
       {
         $group: {
           _id: '$chefId',
