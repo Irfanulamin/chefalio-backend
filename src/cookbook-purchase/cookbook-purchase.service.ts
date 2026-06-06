@@ -518,11 +518,18 @@ export class CookbookPurchaseService {
       receiptEmail,
     });
 
-    await this.mailService.sendPurchaseReceipt(receiptEmail, {
-      cookbookTitle: cookbook.title,
-      cookbookImage: cookbook.cookbook_image,
-      price: cookbook.price,
-      purchaseDate: new Date(),
-    });
+    try {
+      await this.mailService.sendPurchaseReceipt(receiptEmail, {
+        cookbookTitle: cookbook.title,
+        cookbookImage: cookbook.cookbook_image,
+        price: cookbook.price,
+        purchaseDate: new Date(),
+      });
+    } catch (err) {
+      this.logger.error(
+        'Purchase receipt email failed for session ' + session.id,
+        err,
+      );
+    }
   }
 }

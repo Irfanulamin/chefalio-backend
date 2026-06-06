@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateCookbookDto } from './dto/create-cookbook.dto';
@@ -14,6 +15,8 @@ import { NotificationService } from '../notifications/notification.service';
 
 @Injectable()
 export class CookbookService {
+  private readonly logger = new Logger(CookbookService.name);
+
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Cookbook.name) private cookbookModel: Model<Cookbook>,
@@ -66,7 +69,7 @@ export class CookbookService {
         targetId: cookbook._id as Types.ObjectId,
         thumbnail: cookbook_image,
       })
-      .catch(() => {});
+      .catch((err) => this.logger.warn('Notification dispatch failed', err));
 
     return {
       success: true,
@@ -221,7 +224,7 @@ export class CookbookService {
           message: `All cookbooks are now ${discount}% off. Grab one before the sale ends!`,
           discount,
         })
-        .catch(() => {});
+        .catch((err) => this.logger.warn('Notification dispatch failed', err));
     }
 
     return {

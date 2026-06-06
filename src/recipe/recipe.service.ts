@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
@@ -15,6 +16,8 @@ import { NotificationService } from '../notifications/notification.service';
 
 @Injectable()
 export class RecipeService {
+  private readonly logger = new Logger(RecipeService.name);
+
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Recipe.name) private recipeModel: Model<Recipe>,
@@ -70,7 +73,7 @@ export class RecipeService {
         targetId: recipe._id as Types.ObjectId,
         thumbnail: imageUrls[0],
       })
-      .catch(() => {});
+      .catch((err) => this.logger.warn('Notification dispatch failed', err));
 
     return {
       success: true,

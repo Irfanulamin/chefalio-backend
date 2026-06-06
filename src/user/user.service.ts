@@ -177,9 +177,11 @@ export class UserService {
   }
 
   async getUserById(userId: Types.ObjectId | string) {
-    return this.userModel
+    const user = await this.userModel
       .findById(userId)
       .select('-password -__v -createdAt -updatedAt');
+    if (!user) throw new NotFoundException('User not found');
+    return user;
   }
 
   async findOrCreateOAuthUser(data: {
