@@ -9,7 +9,8 @@
   "pnpm": {
     "overrides": {
       "nanoid": "3"
-    }
+    },
+    "onlyBuiltDependencies": ["@nestjs/core", "@swc/core", "bcrypt", "unrs-resolver"]
   },
   "scripts": {
     "build": "nest build",

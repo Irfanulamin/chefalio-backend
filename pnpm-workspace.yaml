@@ -1,5 +1,0 @@
-allowBuilds:
-  '@nestjs/core': true
-  '@swc/core': true
-  bcrypt: true
-  unrs-resolver: true
