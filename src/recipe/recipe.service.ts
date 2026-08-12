@@ -197,6 +197,18 @@ export class RecipeService {
     }
 
     await this.recipeModel.findByIdAndDelete(id);
+
+    /* The recipe's images have just been removed from Cloudinary, so any
+       notification still advertising it now renders a dead thumbnail
+       alongside a link to a page that 404s. Awaited so the tray is
+       consistent by the time the client refetches, but never allowed to
+       fail the delete — the recipe is already gone either way. */
+    await this.notificationService
+      .deleteByTarget(recipe._id as Types.ObjectId)
+      .catch((err) =>
+        this.logger.warn('Notification cleanup failed after recipe delete', err),
+      );
+
     return { success: true, message: 'Recipe deleted successfully' };
   }
 

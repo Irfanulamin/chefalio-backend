@@ -266,6 +266,19 @@ export class CookbookService {
     );
     if (publicId) await this.cloudinaryService.deleteImage(publicId); // same fix
     await this.cookbookModel.findByIdAndDelete(id);
+
+    /* Same cleanup as the recipe delete: the cover has just been removed
+       from Cloudinary, so a surviving "New Cookbook" notification would
+       point at a missing image and a missing page. */
+    await this.notificationService
+      .deleteByTarget(cookbook._id as Types.ObjectId)
+      .catch((err) =>
+        this.logger.warn(
+          'Notification cleanup failed after cookbook delete',
+          err,
+        ),
+      );
+
     return {
       success: true,
       message: 'Cookbook removed successfully',
