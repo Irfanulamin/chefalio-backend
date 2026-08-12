@@ -368,8 +368,14 @@ export class RecipeService {
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
     fourteenDaysAgo.setHours(0, 0, 0, 0);
 
-    const [difficultyBreakdown, topTags, uploadTrend, topRecipes] =
-      await Promise.all([
+    const [
+      difficultyBreakdown,
+      topTags,
+      uploadTrend,
+      topRecipes,
+      totals,
+      recentRecipes,
+    ] = await Promise.all([
         this.recipeModel.aggregate([
           { $match: { authorId: chefObjectId } },
           { $group: { _id: '$difficulty', count: { $sum: 1 } } },
@@ -424,6 +430,38 @@ export class RecipeService {
           { $sort: { engagementScore: -1 } },
           { $limit: 5 },
         ]),
+
+        /*
+         * Headline totals, computed in the database.
+         *
+         * The chef dashboard used to get these by calling
+         * GET /recipes/my-recipes, pulling down every recipe the chef has
+         * ever written — descriptions, full ingredient arrays, every
+         * instruction step, three image URLs each — and then doing
+         * `recipes.length` and two `reduce`s over it in the browser. That is
+         * an unbounded response body to produce three integers, and it grows
+         * with the chef's success.
+         */
+        this.recipeModel.aggregate([
+          { $match: { authorId: chefObjectId } },
+          {
+            $group: {
+              _id: null,
+              totalRecipes: { $sum: 1 },
+              totalLoves: { $sum: '$lovedCount' },
+              totalSaves: { $sum: '$savedCount' },
+            },
+          },
+        ]),
+
+        // The four cards at the bottom of the dashboard — the only recipe
+        // *documents* it actually renders.
+        this.recipeModel
+          .find({ authorId: chefObjectId })
+          .sort({ createdAt: -1 })
+          .limit(4)
+          .select('title images difficulty lovedCount')
+          .lean(),
       ]);
 
     return {
@@ -431,6 +469,16 @@ export class RecipeService {
       statusCode: 200,
       message: 'Chef recipe analytics retrieved successfully',
       data: {
+        totalRecipes: (totals[0]?.totalRecipes as number) ?? 0,
+        totalLoves: (totals[0]?.totalLoves as number) ?? 0,
+        totalSaves: (totals[0]?.totalSaves as number) ?? 0,
+        recentRecipes: recentRecipes.map((r) => ({
+          _id: String(r._id),
+          title: r.title,
+          image: r.images?.[0] ?? '',
+          difficulty: r.difficulty,
+          lovedCount: r.lovedCount,
+        })),
         myDifficultyBreakdown: difficultyBreakdown,
         myTopTags: topTags,
         uploadTrend,

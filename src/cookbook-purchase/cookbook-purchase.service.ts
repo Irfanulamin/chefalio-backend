@@ -287,7 +287,7 @@ export class CookbookPurchaseService {
   async getChefDashboardEarnings(chefId: string) {
     const chefOid = new Types.ObjectId(chefId);
 
-    const [totals, recentOrders, topCookbooks] = await Promise.all([
+    const [totals, recentOrders, topCookbooks, totalCookbooks] = await Promise.all([
       this.purchaseModel.aggregate([
         { $match: { chefId: chefOid, paymentStatus: { $in: ['paid', 'shipped', 'delivered'] } } },
         {
@@ -332,6 +332,10 @@ export class CookbookPurchaseService {
           },
         },
       ]),
+
+      // One integer instead of GET /cookbooks/my-cookbooks?limit=100, which
+      // the dashboard was fetching in full so it could render `.length`.
+      this.cookbookModel.countDocuments({ authorId: chefOid }),
     ]);
 
     const totalRevenue = (totals[0]?.totalRevenue as number) ?? 0;
@@ -342,6 +346,7 @@ export class CookbookPurchaseService {
       statusCode: 200,
       message: 'Chef dashboard earnings retrieved',
       data: {
+        totalCookbooks,
         totalRevenue: parseFloat(totalRevenue.toFixed(2)),
         totalProfit: parseFloat((totalRevenue * this.CHEF_PROFIT_RATE).toFixed(2)),
         totalOrders,
