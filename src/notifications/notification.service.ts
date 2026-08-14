@@ -4,6 +4,7 @@ import { Connection, Model, Types } from 'mongoose';
 import { Notification, NotificationType } from './schemas/notification.schema';
 import { NotificationGateway } from './notification.gateway';
 import { User } from '../user/schema/user.schema';
+import { FollowService } from '../follow/follow.service';
 
 export interface CreateNotificationDto {
   type: NotificationType;
@@ -14,6 +15,9 @@ export interface CreateNotificationDto {
   targetId?: Types.ObjectId;
   thumbnail?: string;
   discount?: number;
+  /** Set on `new_recipe`/`new_cookbook` so the feed can be scoped to that
+     chef's followers. Omit for platform-wide notices (a global discount). */
+  chefId?: Types.ObjectId;
 }
 
 @Injectable()
@@ -33,6 +37,7 @@ export class NotificationService {
     private readonly connection: Connection,
 
     private readonly gateway: NotificationGateway,
+    private readonly followService: FollowService,
   ) {}
 
   private readonly logger = new Logger(NotificationService.name);
@@ -102,9 +107,23 @@ export class NotificationService {
    * the response never waits on it and a failed sweep only means the next
    * read filters them again.
    */
-  async getRecent() {
+  /**
+   * The tray is scoped to what this user actually wants to hear about:
+   * a `new_recipe`/`new_cookbook` notification only surfaces if they
+   * follow the chef it's about. `discount` has no `chefId` and always
+   * shows — it's the platform announcing a sale, not a chef's activity.
+   */
+  async getRecent(userId: string) {
+    const followedChefIds = await this.followService.getFollowedChefIds(userId);
+
     const notifications = await this.notificationModel
-      .find()
+      .find({
+        $or: [
+          { chefId: { $exists: false } },
+          { chefId: null },
+          { chefId: { $in: followedChefIds } },
+        ],
+      })
       .sort({ createdAt: -1 })
       .limit(30)
       .lean();

@@ -10,7 +10,7 @@ export class NotificationController {
   @UseGuards(AuthGuard)
   async getNotifications(@Req() req: Request & { user: { sub: string } }) {
     const [notifications, lastReadAt] = await Promise.all([
-      this.notificationService.getRecent(),
+      this.notificationService.getRecent(req.user.sub),
       this.notificationService.getUserLastReadAt(req.user.sub),
     ]);
     return { success: true, data: notifications, lastReadAt };

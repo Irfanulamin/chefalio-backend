@@ -30,6 +30,13 @@ export class Notification {
 
   @Prop({ type: Number })
   discount?: number;
+
+  /** The chef this notification is about — set on `new_recipe` and
+     `new_cookbook`, absent on `discount` (a platform-wide sale, not tied
+     to one chef). Absence means "everyone sees it"; presence means "only
+     that chef's followers do" — see NotificationService.getRecent. */
+  @Prop({ type: Types.ObjectId, ref: 'User' })
+  chefId?: Types.ObjectId;
 }
 
 export const NotificationSchema = SchemaFactory.createForClass(Notification);

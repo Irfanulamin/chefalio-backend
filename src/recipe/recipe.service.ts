@@ -72,6 +72,7 @@ export class RecipeService {
         actorAvatar: user.profile_url,
         targetId: recipe._id as Types.ObjectId,
         thumbnail: imageUrls[0],
+        chefId: user._id as Types.ObjectId,
       })
       .catch((err) => this.logger.warn('Notification dispatch failed', err));
 

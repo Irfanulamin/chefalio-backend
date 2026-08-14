@@ -13,7 +13,6 @@ import { UpsertChefProfileDto } from './dto/upsert-chef-profile.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles, Role } from '../auth/roles.decorator';
-import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 
 @Controller('chef-profile')
 @UseGuards(AuthGuard)
@@ -28,9 +27,11 @@ export class ChefProfileController {
     return this.chefProfileService.getChefProfile(req.user.sub);
   }
 
-  // GET /chef-profile/:chefId — anyone with auth can view a chef's extended profile
+  // GET /chef-profile/:chefId — anyone with auth can view a chef's extended
+  // profile. `:chefId` accepts either a Mongo id or a username, same as
+  // ChefController — see ChefProfileService.resolveChefId.
   @Get(':chefId')
-  getChefProfile(@Param('chefId', ParseObjectIdPipe) chefId: string) {
+  getChefProfile(@Param('chefId') chefId: string) {
     return this.chefProfileService.getChefProfile(chefId);
   }
 

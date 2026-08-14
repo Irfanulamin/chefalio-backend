@@ -6,6 +6,7 @@ import { User, UserSchema } from '../user/schema/user.schema';
 import { Cookbook, CookbookSchema } from '../cookbook/schemas/cookbook.schema';
 import { Recipe, RecipeSchema } from '../recipe/schemas/recipe.schema';
 import { ChefProfile, ChefProfileSchema } from '../chef-profile/schemas/chef-profile.schema';
+import { FollowModule } from '../follow/follow.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ChefProfile, ChefProfileSchema } from '../chef-profile/schemas/chef-pro
       { name: Recipe.name, schema: RecipeSchema },
       { name: ChefProfile.name, schema: ChefProfileSchema },
     ]),
+    FollowModule,
   ],
   controllers: [ChefController],
   providers: [ChefService],

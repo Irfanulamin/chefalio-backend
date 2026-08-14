@@ -9,6 +9,7 @@ import { NotificationService } from './notification.service';
 import { NotificationController } from './notification.controller';
 import { User, UserSchema } from '../user/schema/user.schema';
 import { AuthModule } from '../auth/auth.module';
+import { FollowModule } from '../follow/follow.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AuthModule } from '../auth/auth.module';
       { name: User.name, schema: UserSchema },
     ]),
     AuthModule,
+    FollowModule,
   ],
   controllers: [NotificationController],
   providers: [NotificationGateway, NotificationService],

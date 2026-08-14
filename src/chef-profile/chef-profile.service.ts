@@ -12,7 +12,25 @@ export class ChefProfileService {
     @InjectModel(User.name) private userModel: Model<User>,
   ) {}
 
-  async getChefProfile(chefId: string) {
+  /** Same id-or-username resolution as ChefService.resolveChef — a 24-char
+     hex string is treated as an id, anything else is looked up by
+     username. Without this, `/chef-profile/danielhumm` queried
+     `{ chefId: "danielhumm" }` against a field that only ever holds real
+     ObjectIds, so it silently matched nothing and every chef's bio read
+     as "hasn't written one yet" once profile links switched to usernames. */
+  private async resolveChefId(identifier: string): Promise<string> {
+    if (/^[0-9a-fA-F]{24}$/.test(identifier)) return identifier;
+
+    const chef = await this.userModel
+      .findOne({ username: identifier, role: 'chef', isActive: true })
+      .select('_id');
+    if (!chef) throw new NotFoundException('Chef not found');
+    return String(chef._id);
+  }
+
+  async getChefProfile(identifier: string) {
+    const chefId = await this.resolveChefId(identifier);
+
     const profile = await this.chefProfileModel
       .findOne({ chefId })
       .select('-__v -createdAt -updatedAt');

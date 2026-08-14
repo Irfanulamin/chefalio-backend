@@ -5,6 +5,7 @@ import { User } from '../user/schema/user.schema';
 import { Recipe } from '../recipe/schemas/recipe.schema';
 import { Cookbook } from '../cookbook/schemas/cookbook.schema';
 import { ChefProfile } from '../chef-profile/schemas/chef-profile.schema';
+import { FollowService } from '../follow/follow.service';
 
 @Injectable()
 export class ChefService {
@@ -13,10 +14,16 @@ export class ChefService {
     @InjectModel(Recipe.name) private recipeModel: Model<Recipe>,
     @InjectModel(Cookbook.name) private cookbookModel: Model<Cookbook>,
     @InjectModel(ChefProfile.name) private chefProfileModel: Model<ChefProfile>,
+    private readonly followService: FollowService,
   ) {}
 
   // GET /chefs — all chefs (paginated + optional search)
-  async getAllChefs(page: number, limit: number, search: string = '') {
+  async getAllChefs(
+    page: number,
+    limit: number,
+    search: string = '',
+    viewerId?: string,
+  ) {
     const filter: Record<string, any> = { role: 'chef', isActive: true };
 
     if (search) {
@@ -25,6 +32,8 @@ export class ChefService {
         { username: { $regex: search, $options: 'i' } },
       ];
     }
+
+    const viewerObjectId = viewerId ? new Types.ObjectId(viewerId) : null;
 
     const [data, total] = await Promise.all([
       this.userModel.aggregate([
@@ -49,9 +58,21 @@ export class ChefService {
           },
         },
         {
+          $lookup: {
+            from: 'follows',
+            localField: '_id',
+            foreignField: 'chefId',
+            as: '_followers',
+          },
+        },
+        {
           $addFields: {
             recipeCount: { $size: '$_recipes' },
             cookbookCount: { $size: '$_cookbooks' },
+            followerCount: { $size: '$_followers' },
+            isFollowing: viewerObjectId
+              ? { $in: [viewerObjectId, '$_followers.followerId'] }
+              : false,
           },
         },
         {
@@ -63,6 +84,7 @@ export class ChefService {
             isActive: 0,
             _recipes: 0,
             _cookbooks: 0,
+            _followers: 0,
           },
         },
       ]),
@@ -97,15 +119,30 @@ export class ChefService {
     };
   }
 
-  // GET /chefs/:id — single chef profile with extended profile data
-  async getChefById(id: string) {
+  /**
+   * Resolves the `:id` route param to an active chef document — it's
+   * either a raw Mongo ObjectId (old links, direct API callers) or a
+   * username (what the frontend now links to, so a profile URL reads
+   * `/chefs/gordon-ramsay` instead of a database id). A 24-char hex string
+   * is treated as an id; anything else is looked up by username.
+   */
+  private async resolveChef(identifier: string) {
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(identifier);
     const chef = await this.userModel
-      .findOne({ _id: id, role: 'chef', isActive: true })
+      .findOne({
+        ...(isObjectId ? { _id: identifier } : { username: identifier }),
+        role: 'chef',
+        isActive: true,
+      })
       .select('-password -__v -createdAt -updatedAt -isActive');
 
-    if (!chef) {
-      throw new NotFoundException('Chef not found');
-    }
+    if (!chef) throw new NotFoundException('Chef not found');
+    return chef;
+  }
+
+  // GET /chefs/:id — single chef profile with extended profile data
+  async getChefById(id: string) {
+    const chef = await this.resolveChef(id);
 
     const profile = await this.chefProfileModel
       .findOne({ chefId: chef._id })
@@ -120,22 +157,18 @@ export class ChefService {
   }
 
   // GET /chefs/:id/recipes — recipes by a specific chef
-  async getChefRecipes(chefId: string, page: number, limit: number) {
-    const chef = await this.userModel.findOne({
-      _id: chefId,
-      role: 'chef',
-      isActive: true,
-    });
-    if (!chef) throw new NotFoundException('Chef not found');
+  async getChefRecipes(id: string, page: number, limit: number) {
+    const chef = await this.resolveChef(id);
+    const chefId = chef._id as Types.ObjectId;
 
     const [recipes, total] = await Promise.all([
       this.recipeModel
-        .find({ authorId: new Types.ObjectId(chefId) })
+        .find({ authorId: chefId })
         .populate('authorId', 'fullName username email profile_url')
         .skip((page - 1) * limit)
         .limit(limit)
         .sort({ createdAt: -1 }),
-      this.recipeModel.countDocuments({ authorId: new Types.ObjectId(chefId) }),
+      this.recipeModel.countDocuments({ authorId: chefId }),
     ]);
 
     return {
@@ -155,24 +188,20 @@ export class ChefService {
   }
 
   // GET /chefs/:id/cookbooks — cookbooks by a specific chef
-  async getChefCookbooks(chefId: string, page: number, limit: number) {
-    const chef = await this.userModel.findOne({
-      _id: chefId,
-      role: 'chef',
-      isActive: true,
-    });
-    if (!chef) throw new NotFoundException('Chef not found');
+  async getChefCookbooks(id: string, page: number, limit: number) {
+    const chef = await this.resolveChef(id);
+    const chefId = chef._id as Types.ObjectId;
 
     const [cookbooks, total] = await Promise.all([
       this.cookbookModel
-        .find({ authorId: new Types.ObjectId(chefId), stockCount: { $gt: 0 } })
+        .find({ authorId: chefId, stockCount: { $gt: 0 } })
         .populate('authorId', 'fullName username email profile_url')
         .skip((page - 1) * limit)
         .limit(limit)
         .sort({ createdAt: -1 })
         .select('-__v -updatedAt -createdAt'),
       this.cookbookModel.countDocuments({
-        authorId: new Types.ObjectId(chefId),
+        authorId: chefId,
         stockCount: { $gt: 0 },
       }),
     ]);
@@ -193,24 +222,58 @@ export class ChefService {
     };
   }
 
-  // GET /chefs/:id/related — other chefs, excluding the current one
-  async getRelatedChefs(chefId: string, limit: number = 4) {
-    const chef = await this.userModel.findOne({
-      _id: chefId,
-      role: 'chef',
-      isActive: true,
-    });
-    if (!chef) throw new NotFoundException('Chef not found');
+  /**
+   * GET /chefs/:id/related — chefs to *discover*, not a random four.
+   *
+   * Three exclusions and a ranking make this a recommendation rather than
+   * "whoever else exists": never the chef whose page you're on, never
+   * yourself (you can land here as a chef browsing another chef's
+   * profile), and never someone you already follow — showing an already-
+   * followed chef under "Other chefs" has nothing left to offer. What's
+   * left is ranked by follower count, so the chefs most worth discovering
+   * surface first instead of whoever signed up most recently.
+   */
+  async getRelatedChefs(id: string, limit: number = 4, viewerId?: string) {
+    const chef = await this.resolveChef(id);
+    const chefId = chef._id as Types.ObjectId;
 
-    const related = await this.userModel
-      .find({
-        role: 'chef',
-        isActive: true,
-        _id: { $ne: new Types.ObjectId(chefId) },
-      })
-      .select('-password -__v -createdAt -updatedAt -isActive')
-      .limit(limit)
-      .sort({ createdAt: -1 });
+    const excludeIds = [chefId];
+    if (viewerId) excludeIds.push(new Types.ObjectId(viewerId));
+    if (viewerId) {
+      const followed = await this.followService.getFollowedChefIds(viewerId);
+      excludeIds.push(...followed);
+    }
+
+    const related = await this.userModel.aggregate([
+      {
+        $match: {
+          role: 'chef',
+          isActive: true,
+          _id: { $nin: excludeIds },
+        },
+      },
+      {
+        $lookup: {
+          from: 'follows',
+          localField: '_id',
+          foreignField: 'chefId',
+          as: '_followers',
+        },
+      },
+      { $addFields: { followerCount: { $size: '$_followers' } } },
+      { $sort: { followerCount: -1, createdAt: -1 } },
+      { $limit: limit },
+      {
+        $project: {
+          password: 0,
+          __v: 0,
+          createdAt: 0,
+          updatedAt: 0,
+          isActive: 0,
+          _followers: 0,
+        },
+      },
+    ]);
 
     return {
       success: true,
