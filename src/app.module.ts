@@ -18,6 +18,7 @@ import { AiModule } from './ai/ai.module';
 import { NotificationModule } from './notifications/notification.module';
 import { ChefApplicationModule } from './chef-application/chef-application.module';
 import { FollowModule } from './follow/follow.module';
+import { DemoReadOnlyGuard } from './auth/demo-read-only.guard';
 
 @Module({
   imports: [
@@ -58,6 +59,10 @@ import { FollowModule } from './follow/follow.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: DemoReadOnlyGuard,
     },
   ],
 })

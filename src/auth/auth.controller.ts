@@ -21,6 +21,7 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
 import { AlreadyLoggedInGuard } from './already-logged-in.guard';
 import { GoogleOAuthGuard } from './google-oauth.guard';
+import { SkipDemoGuard } from './skip-demo-guard.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -62,9 +63,14 @@ export class AuthController {
   @UseGuards(AuthGuard)
   @Get('/me')
   getMe(@Request() req) {
-    return { userId: req.user.sub, role: req.user.role };
+    return {
+      userId: req.user.sub,
+      role: req.user.role,
+      isDemo: !!req.user.isDemo,
+    };
   }
 
+  @SkipDemoGuard()
   @Post('/logout')
   logout(@Res({ passthrough: true }) res: Response) {
     const cookieOpts = { httpOnly: true, secure: true, sameSite: 'none' as const };
@@ -78,6 +84,7 @@ export class AuthController {
   }
 
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @SkipDemoGuard()
   @Post('/refresh')
   async refresh(
     @Request() req,
@@ -126,7 +133,7 @@ export class AuthController {
   async googleCallback(@Request() req, @Res() res: Response) {
     const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
     if (!req.user) {
-      return res.redirect(`${frontendUrl}/login?error=oauth_failed`);
+      return res.redirect(`${frontendUrl}/sign-in?error=oauth_failed`);
     }
     return this.authService.oauthLogin(req.user, res);
   }

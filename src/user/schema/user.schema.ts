@@ -38,6 +38,13 @@ export class User {
   @Prop({ default: false })
   isEmailVerified!: boolean;
 
+  // Seeded reviewer accounts (see seed-demo-accounts.js). Their credentials
+  // are public, so every write request from one is blocked server-side by
+  // DemoReadOnlyGuard regardless of role — a demo admin can look at every
+  // panel but can't delete a recipe, change a role, or touch another user.
+  @Prop({ default: false })
+  isDemo!: boolean;
+
   @Prop({ type: Date })
   notificationLastReadAt?: Date;
 }

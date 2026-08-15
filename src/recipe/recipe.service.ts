@@ -95,6 +95,14 @@ export class RecipeService {
   ) {
     const filter: Record<string, any> = {};
 
+    // Seeded demo accounts (see seed-demo-accounts.js) publish recipes so
+    // their own dashboard/analytics has something to show — those never
+    // belong in the catalogue a real visitor browses.
+    const demoAuthors = await this.userModel
+      .find({ isDemo: true })
+      .select('_id');
+    const demoAuthorIds = demoAuthors.map((u) => u._id);
+
     if (search) {
       const searchRegex = { $regex: search, $options: 'i' };
       filter.$or = [
@@ -115,8 +123,8 @@ export class RecipeService {
     if (author) {
       const authorUser = await this.userModel
         .findOne({ username: { $regex: author, $options: 'i' } })
-        .select('_id');
-      if (!authorUser) {
+        .select('_id isDemo');
+      if (!authorUser || authorUser.isDemo) {
         return {
           success: true,
           statusCode: 200,
@@ -133,6 +141,8 @@ export class RecipeService {
         };
       }
       filter.authorId = authorUser._id;
+    } else if (demoAuthorIds.length > 0) {
+      filter.authorId = { $nin: demoAuthorIds };
     }
 
     const sortOrder: Record<string, any> =

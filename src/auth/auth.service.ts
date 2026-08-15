@@ -51,7 +51,7 @@ export class AuthService {
 
   private async issueTokens(
     res: Response,
-    payload: { sub: unknown; role: string },
+    payload: { sub: unknown; role: string; isDemo?: boolean },
   ) {
     const accessToken = await this.jwtService.signAsync(payload, {
       expiresIn: '15m',
@@ -94,7 +94,7 @@ export class AuthService {
     }
 
     const newAccessToken = await this.jwtService.signAsync(
-      { sub: payload.sub, role: payload.role },
+      { sub: payload.sub, role: payload.role, isDemo: user.isDemo },
       { expiresIn: '15m' },
     );
     res.cookie('access_token', newAccessToken, {
@@ -169,7 +169,7 @@ export class AuthService {
       );
     }
 
-    const payload = { sub: user._id, role: user.role };
+    const payload = { sub: user._id, role: user.role, isDemo: user.isDemo };
     await this.issueTokens(res, payload);
 
     return {
@@ -177,6 +177,7 @@ export class AuthService {
       statusCode: 200,
       message: 'Login successful',
       role: user.role,
+      isDemo: user.isDemo,
     };
   }
 
@@ -201,7 +202,7 @@ export class AuthService {
     const user = await this.userModel.findById(tokenDoc.user);
     if (!user) throw new BadRequestException('User not found.');
 
-    const payload = { sub: user._id, role: user.role };
+    const payload = { sub: user._id, role: user.role, isDemo: user.isDemo };
     await this.issueTokens(res, payload);
 
     return {
@@ -327,14 +328,14 @@ export class AuthService {
   }
 
   async oauthLogin(
-    user: { _id: string; role: string; isActive: boolean },
+    user: { _id: string; role: string; isActive: boolean; isDemo?: boolean },
     res: Response,
   ) {
     if (!user.isActive) {
-      return res.redirect(`${this.frontendUrl}/login?error=account_deactivated`);
+      return res.redirect(`${this.frontendUrl}/sign-in?error=account_deactivated`);
     }
 
-    const payload = { sub: user._id, role: user.role };
+    const payload = { sub: user._id, role: user.role, isDemo: user.isDemo };
     await this.issueTokens(res, payload);
 
     const redirectPath =

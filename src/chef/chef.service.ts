@@ -24,7 +24,14 @@ export class ChefService {
     search: string = '',
     viewerId?: string,
   ) {
-    const filter: Record<string, any> = { role: 'chef', isActive: true };
+    // isDemo excluded: the seeded demo chef (see seed-demo-accounts.js)
+    // needs its own dashboard populated, but a real visitor browsing the
+    // public chef directory shouldn't land on it.
+    const filter: Record<string, any> = {
+      role: 'chef',
+      isActive: true,
+      isDemo: { $ne: true },
+    };
 
     if (search) {
       filter.$or = [

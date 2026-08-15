@@ -89,10 +89,20 @@ export class CookbookService {
 
     if (author) {
       const authorUsers = await this.userModel
-        .find({ fullName: { $regex: author, $options: 'i' } })
+        .find({ fullName: { $regex: author, $options: 'i' }, isDemo: { $ne: true } })
         .select('_id');
       if (!authorUsers.length) return this.emptyCookbookResponse(page, limit);
       query.authorId = { $in: authorUsers.map((u) => u._id) };
+    } else {
+      // Seeded demo accounts (see seed-demo-accounts.js) publish cookbooks
+      // so their own dashboard/analytics has something to show — those
+      // never belong in the catalogue a real visitor browses.
+      const demoAuthors = await this.userModel
+        .find({ isDemo: true })
+        .select('_id');
+      if (demoAuthors.length > 0) {
+        query.authorId = { $nin: demoAuthors.map((u) => u._id) };
+      }
     }
 
     const [data, total] = await Promise.all([
