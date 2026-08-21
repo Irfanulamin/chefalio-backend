@@ -8,16 +8,29 @@ import {
   CookbookPurchaseSchema,
 } from './schemas/cookbook-purchase.schemas';
 import { MailService } from '../services/mail.service';
+import { StripeGateway } from './stripe.gateway';
+import { EarningsAnalyticsService } from './earnings-analytics.service';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    // Declared rather than leaned on. ConfigModule is registered globally in
+    // AppModule, so this import is redundant at runtime — but without it the
+    // module cannot be compiled on its own, which means StripeGateway and
+    // MailService cannot be wired up in a test without booting the whole app.
+    ConfigModule,
     MongooseModule.forFeature([
       { name: CookbookPurchase.name, schema: CookbookPurchaseSchema },
       { name: Cookbook.name, schema: CookbookSchema },
     ]),
   ],
   controllers: [CookbookPurchaseController],
-  providers: [CookbookPurchaseService, MailService],
+  providers: [
+    CookbookPurchaseService,
+    EarningsAnalyticsService,
+    MailService,
+    StripeGateway,
+  ],
   exports: [CookbookPurchaseService],
 })
 export class CookbookPurchaseModule {}

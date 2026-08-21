@@ -20,22 +20,22 @@ import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Role, Roles } from '../auth/roles.decorator';
 import { UpdateCookbookPurchaseDto } from './dto/update-cookbook-purchase.dto';
-import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
+import { StripeGateway } from './stripe.gateway';
+import { EarningsAnalyticsService } from './earnings-analytics.service';
 
 @Controller('cookbook-purchase')
 export class CookbookPurchaseController {
   private readonly logger = new Logger(CookbookPurchaseController.name);
-  private stripe: Stripe;
+
   constructor(
     private readonly cookbookPurchaseService: CookbookPurchaseService,
-    private readonly config: ConfigService,
-  ) {
-    this.stripe = new Stripe(this.config.getOrThrow('STRIPE_SECRET_KEY'));
-  }
+    private readonly stripe: StripeGateway,
+    private readonly earnings: EarningsAnalyticsService,
+  ) {}
 
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(AuthGuard)
@@ -56,11 +56,7 @@ export class CookbookPurchaseController {
 
     let event: Stripe.Event;
     try {
-      event = this.stripe.webhooks.constructEvent(
-        req.rawBody,
-        sig,
-        this.config.getOrThrow('STRIPE_WEBHOOK_SECRET'),
-      );
+      event = this.stripe.constructWebhookEvent(req.rawBody, sig);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       throw new BadRequestException(
@@ -100,7 +96,7 @@ export class CookbookPurchaseController {
   async getChefDashboardEarnings(
     @Req() req: Request & { user: { sub: string } },
   ) {
-    return this.cookbookPurchaseService.getChefDashboardEarnings(req.user.sub);
+    return this.earnings.getChefDashboardEarnings(req.user.sub);
   }
 
   @Get('analytics/chef')
@@ -110,10 +106,7 @@ export class CookbookPurchaseController {
     @Req() req: Request & { user: { sub: string } },
     @Query('period') period?: string,
   ) {
-    return this.cookbookPurchaseService.getChefEarningsAnalytics(
-      req.user.sub,
-      period,
-    );
+    return this.earnings.getChefEarningsAnalytics(req.user.sub, period);
   }
 
   @Get('admin/orders')
@@ -125,21 +118,26 @@ export class CookbookPurchaseController {
     @Query('search') search: string = '',
     @Query('status') status: string = '',
   ) {
-    return this.cookbookPurchaseService.getAllOrdersAdmin(page, limit, search, status);
+    return this.cookbookPurchaseService.getAllOrdersAdmin(
+      page,
+      limit,
+      search,
+      status,
+    );
   }
 
   @Get('analytics/admin')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
   async getAdminEarningsAnalytics() {
-    return this.cookbookPurchaseService.getAdminEarningsAnalytics();
+    return this.earnings.getAdminEarningsAnalytics();
   }
 
   @Get('analytics/admin/top-chefs')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
   async getAdminTopChefs() {
-    return this.cookbookPurchaseService.getAdminTopChefs();
+    return this.earnings.getAdminTopChefs();
   }
 
   @Patch('update-payment-status/:purchaseId')

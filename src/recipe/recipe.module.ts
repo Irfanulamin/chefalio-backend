@@ -7,6 +7,7 @@ import { CloudinaryService } from '../services/cloudinary.service';
 import { Recipe, RecipeSchema } from './schemas/recipe.schema';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationModule } from '../notifications/notification.module';
+import { RecipeAnalyticsService } from './recipe-analytics.service';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { NotificationModule } from '../notifications/notification.module';
     NotificationModule,
   ],
   controllers: [RecipeController],
-  providers: [RecipeService, CloudinaryService],
+  providers: [RecipeAnalyticsService, RecipeService, CloudinaryService],
   exports: [RecipeService],
 })
 export class RecipeModule {}

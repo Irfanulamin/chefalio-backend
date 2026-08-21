@@ -25,10 +25,14 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { Throttle } from '@nestjs/throttler';
+import { RecipeAnalyticsService } from './recipe-analytics.service';
 
 @Controller('recipes')
 export class RecipeController {
-  constructor(private readonly recipeService: RecipeService) {}
+  constructor(
+    private readonly recipeService: RecipeService,
+    private readonly analytics: RecipeAnalyticsService,
+  ) {}
 
   @Post('create')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
@@ -87,7 +91,7 @@ export class RecipeController {
   @Roles(Role.Admin, Role.Chef)
   @Get('/dashboard/analytics')
   async getDashboardAnalytics() {
-    return this.recipeService.getDashboardAnalytics();
+    return this.analytics.getDashboardAnalytics();
   }
 
   @UseGuards(AuthGuard, RolesGuard)
@@ -96,14 +100,14 @@ export class RecipeController {
   async getChefRecipeAnalytics(
     @Req() req: Request & { user: { sub: string } },
   ) {
-    return this.recipeService.getChefRecipeAnalytics(req.user.sub);
+    return this.analytics.getChefRecipeAnalytics(req.user.sub);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
   @Get('/admin/upload-trend')
   async getAdminUploadTrend() {
-    return this.recipeService.getAdminUploadTrend();
+    return this.analytics.getAdminUploadTrend();
   }
 
   @UseGuards(AuthGuard)

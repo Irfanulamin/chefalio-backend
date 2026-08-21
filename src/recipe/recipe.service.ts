@@ -11,6 +11,8 @@ import { User } from '../user/schema/user.schema';
 import { Model, Types } from 'mongoose';
 import { CloudinaryService } from '../services/cloudinary.service';
 import { Recipe } from './schemas/recipe.schema';
+import { hideDemoAuthors } from '../common/demo-visibility';
+import { paginated } from '../common/api-response';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
 import { NotificationService } from '../notifications/notification.service';
 
@@ -95,14 +97,6 @@ export class RecipeService {
   ) {
     const filter: Record<string, any> = {};
 
-    // Seeded demo accounts (see seed-demo-accounts.js) publish recipes so
-    // their own dashboard/analytics has something to show — those never
-    // belong in the catalogue a real visitor browses.
-    const demoAuthors = await this.userModel
-      .find({ isDemo: true })
-      .select('_id');
-    const demoAuthorIds = demoAuthors.map((u) => u._id);
-
     if (search) {
       const searchRegex = { $regex: search, $options: 'i' };
       filter.$or = [
@@ -125,24 +119,14 @@ export class RecipeService {
         .findOne({ username: { $regex: author, $options: 'i' } })
         .select('_id isDemo');
       if (!authorUser || authorUser.isDemo) {
-        return {
-          success: true,
-          statusCode: 200,
-          message: 'Recipes retrieved successfully',
-          data: {
-            recipes: [],
-            pagination: {
-              total: 0,
-              page,
-              limit,
-              totalPages: 0,
-            },
-          },
-        };
+        return paginated([], 'Recipes retrieved successfully', 0, page, limit);
       }
       filter.authorId = authorUser._id;
-    } else if (demoAuthorIds.length > 0) {
-      filter.authorId = { $nin: demoAuthorIds };
+    } else {
+      // No author asked for, so this is the public catalogue: hide the
+      // seeded demo accounts' recipes. Looked up here rather than above so
+      // an author-filtered search doesn't pay for a query it never uses.
+      Object.assign(filter, await hideDemoAuthors(this.userModel));
     }
 
     const sortOrder: Record<string, any> =
@@ -162,20 +146,13 @@ export class RecipeService {
       this.recipeModel.countDocuments(filter),
     ]);
 
-    return {
-      success: true,
-      statusCode: 200,
-      message: 'Recipes retrieved successfully',
-      data: {
-        recipes,
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
-      },
-    };
+    return paginated(
+      recipes,
+      'Recipes retrieved successfully',
+      total,
+      page,
+      limit,
+    );
   }
 
   async getRecipeById(id: string) {
@@ -217,7 +194,10 @@ export class RecipeService {
     await this.notificationService
       .deleteByTarget(recipe._id as Types.ObjectId)
       .catch((err) =>
-        this.logger.warn('Notification cleanup failed after recipe delete', err),
+        this.logger.warn(
+          'Notification cleanup failed after recipe delete',
+          err,
+        ),
       );
 
     return { success: true, message: 'Recipe deleted successfully' };
@@ -316,229 +296,6 @@ export class RecipeService {
       statusCode: 200,
       message: 'Recipes retrieved successfully',
       data: recipes,
-    };
-  }
-
-  async getDashboardAnalytics() {
-    const [
-      totalRecipes,
-      recipesPerDifficulty,
-      topTags,
-      top3MostUploadedAuthors,
-    ] = await Promise.all([
-      this.recipeModel.countDocuments(),
-
-      this.recipeModel.aggregate([
-        { $group: { _id: '$difficulty', count: { $sum: 1 } } },
-      ]),
-
-      this.recipeModel.aggregate([
-        { $unwind: '$tags' },
-        { $group: { _id: '$tags', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 5 },
-      ]),
-
-      this.recipeModel.aggregate([
-        {
-          $group: {
-            _id: '$authorId',
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { count: -1 } },
-        { $limit: 3 },
-        {
-          $lookup: {
-            from: 'users',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'authorInfo',
-          },
-        },
-        { $unwind: '$authorInfo' },
-        {
-          $project: {
-            userId: '$_id',
-            fullName: '$authorInfo.fullName',
-            username: '$authorInfo.username',
-            count: 1,
-          },
-        },
-      ]),
-    ]);
-
-    return {
-      success: true,
-      statusCode: 200,
-      message: 'Dashboard analytics retrieved successfully',
-      data: {
-        totalRecipes,
-        recipesPerDifficulty: recipesPerDifficulty.map(({ _id, count }) => ({
-          difficulty: _id,
-          count,
-        })),
-        topTags: topTags.map(({ _id, count }) => ({ tag: _id, count })),
-        top3MostUploadedAuthors,
-      },
-    };
-  }
-
-  async getChefRecipeAnalytics(chefId: string) {
-    const chefObjectId = new Types.ObjectId(chefId);
-
-    const fourteenDaysAgo = new Date();
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
-    fourteenDaysAgo.setHours(0, 0, 0, 0);
-
-    const [
-      difficultyBreakdown,
-      topTags,
-      uploadTrend,
-      topRecipes,
-      totals,
-      recentRecipes,
-    ] = await Promise.all([
-        this.recipeModel.aggregate([
-          { $match: { authorId: chefObjectId } },
-          { $group: { _id: '$difficulty', count: { $sum: 1 } } },
-          { $project: { _id: 0, difficulty: '$_id', count: 1 } },
-          { $sort: { count: -1 } },
-        ]),
-
-        this.recipeModel.aggregate([
-          { $match: { authorId: chefObjectId } },
-          { $unwind: '$tags' },
-          { $group: { _id: '$tags', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-          { $limit: 6 },
-          { $project: { _id: 0, tag: '$_id', count: 1 } },
-        ]),
-
-        this.recipeModel.aggregate([
-          {
-            $match: {
-              authorId: chefObjectId,
-              createdAt: { $gte: fourteenDaysAgo },
-            },
-          },
-          {
-            $group: {
-              _id: {
-                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
-              },
-              count: { $sum: 1 },
-            },
-          },
-          { $sort: { _id: 1 } },
-          { $project: { _id: 0, date: '$_id', count: 1 } },
-        ]),
-
-        this.recipeModel.aggregate([
-          { $match: { authorId: chefObjectId } },
-          {
-            $project: {
-              title: 1,
-              image: { $arrayElemAt: ['$images', 0] },
-              lovedCount: 1,
-              savedCount: 1,
-              engagementScore: {
-                $add: [
-                  { $multiply: ['$lovedCount', 2] },
-                  { $multiply: ['$savedCount', 1.5] },
-                ],
-              },
-            },
-          },
-          { $sort: { engagementScore: -1 } },
-          { $limit: 5 },
-        ]),
-
-        /*
-         * Headline totals, computed in the database.
-         *
-         * The chef dashboard used to get these by calling
-         * GET /recipes/my-recipes, pulling down every recipe the chef has
-         * ever written — descriptions, full ingredient arrays, every
-         * instruction step, three image URLs each — and then doing
-         * `recipes.length` and two `reduce`s over it in the browser. That is
-         * an unbounded response body to produce three integers, and it grows
-         * with the chef's success.
-         */
-        this.recipeModel.aggregate([
-          { $match: { authorId: chefObjectId } },
-          {
-            $group: {
-              _id: null,
-              totalRecipes: { $sum: 1 },
-              totalLoves: { $sum: '$lovedCount' },
-              totalSaves: { $sum: '$savedCount' },
-            },
-          },
-        ]),
-
-        // The four cards at the bottom of the dashboard — the only recipe
-        // *documents* it actually renders.
-        this.recipeModel
-          .find({ authorId: chefObjectId })
-          .sort({ createdAt: -1 })
-          .limit(4)
-          .select('title images difficulty lovedCount')
-          .lean(),
-      ]);
-
-    return {
-      success: true,
-      statusCode: 200,
-      message: 'Chef recipe analytics retrieved successfully',
-      data: {
-        totalRecipes: (totals[0]?.totalRecipes as number) ?? 0,
-        totalLoves: (totals[0]?.totalLoves as number) ?? 0,
-        totalSaves: (totals[0]?.totalSaves as number) ?? 0,
-        recentRecipes: recentRecipes.map((r) => ({
-          _id: String(r._id),
-          title: r.title,
-          image: r.images?.[0] ?? '',
-          difficulty: r.difficulty,
-          lovedCount: r.lovedCount,
-        })),
-        myDifficultyBreakdown: difficultyBreakdown,
-        myTopTags: topTags,
-        uploadTrend,
-        topRecipes: topRecipes.map((r) => ({
-          _id: String(r._id),
-          title: r.title as string,
-          image: r.image as string,
-          lovedCount: r.lovedCount as number,
-          savedCount: r.savedCount as number,
-          engagementScore: parseFloat(
-            (r.engagementScore as number).toFixed(1),
-          ),
-        })),
-      },
-    };
-  }
-
-  async getAdminUploadTrend() {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const trend = await this.recipeModel.aggregate([
-      { $match: { createdAt: { $gte: thirtyDaysAgo } } },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { _id: 1 } },
-      { $project: { _id: 0, date: '$_id', count: 1 } },
-    ]);
-
-    return {
-      success: true,
-      statusCode: 200,
-      data: trend,
     };
   }
 }

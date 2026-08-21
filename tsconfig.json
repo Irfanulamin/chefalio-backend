@@ -2,7 +2,7 @@
   "compilerOptions": {
     "module": "commonjs",
     "moduleResolution": "node",
-    "types": ["node", "multer"],
+    "types": ["node", "multer", "jest"],
     "esModuleInterop": true,
     "declaration": true,
     "removeComments": true,

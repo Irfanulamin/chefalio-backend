@@ -8,6 +8,7 @@ import {
 } from './schemas/recipe-interaction.schema';
 import { Recipe, RecipeSchema } from '../recipe/schemas/recipe.schema';
 import { User, UserSchema } from '../user/schema/user.schema';
+import { EngagementAnalyticsService } from './engagement-analytics.service';
 
 @Module({
   imports: [
@@ -18,6 +19,6 @@ import { User, UserSchema } from '../user/schema/user.schema';
     ]),
   ],
   controllers: [RecipeInteractionController],
-  providers: [RecipeInteractionService],
+  providers: [EngagementAnalyticsService, RecipeInteractionService],
 })
 export class RecipeInteractionModule {}

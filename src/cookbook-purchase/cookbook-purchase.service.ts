@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -11,14 +12,17 @@ import { Cookbook } from '../cookbook/schemas/cookbook.schema';
 import { CookbookPurchase } from './schemas/cookbook-purchase.schemas';
 import { MailService } from '../services/mail.service';
 import Stripe from 'stripe';
-import { ConfigService } from '@nestjs/config';
+import { StripeGateway } from './stripe.gateway';
+import {
+  DAILY_PURCHASE_LIMIT,
+  PaymentStatus,
+  planTransition,
+  startOfUTCDay,
+} from './order-lifecycle';
 
 @Injectable()
 export class CookbookPurchaseService {
   private readonly logger = new Logger(CookbookPurchaseService.name);
-  private readonly CHEF_PROFIT_RATE = 0.8;
-  private readonly ADMIN_PROFIT_RATE = 0.2;
-  private stripe: Stripe;
 
   constructor(
     @InjectModel(Cookbook.name)
@@ -29,17 +33,15 @@ export class CookbookPurchaseService {
 
     private readonly mailService: MailService,
 
-    private readonly config: ConfigService,
-  ) {
-    this.stripe = new Stripe(this.config.getOrThrow('STRIPE_SECRET_KEY'), {
-      apiVersion: '2026-02-25.clover',
-    });
-  }
+    private readonly stripe: StripeGateway,
+  ) {}
 
-  private startOfUTCDay(): Date {
-    const d = new Date();
-    d.setUTCHours(0, 0, 0, 0);
-    return d;
+  /** How many cookbooks this buyer has already bought today (UTC). */
+  private countPurchasesToday(buyerId: string | Types.ObjectId) {
+    return this.purchaseModel.countDocuments({
+      buyerId: new Types.ObjectId(buyerId),
+      createdAt: { $gte: startOfUTCDay() },
+    });
   }
 
   async createCheckoutSession(userId: string, dto: CreateCookbookPurchaseDto) {
@@ -57,38 +59,17 @@ export class CookbookPurchaseService {
       throw new ForbiddenException('Cookbook is out of stock');
     }
 
-    const todayPurchases = await this.purchaseModel.countDocuments({
-      buyerId: new Types.ObjectId(userId),
-      createdAt: { $gte: this.startOfUTCDay() },
-    });
-    if (todayPurchases >= 5) {
+    if ((await this.countPurchasesToday(userId)) >= DAILY_PURCHASE_LIMIT) {
       throw new ForbiddenException(
-        'Daily limit reached: you may purchase at most 5 cookbooks per day',
+        `Daily limit reached: you may purchase at most ${DAILY_PURCHASE_LIMIT} cookbooks per day`,
       );
     }
 
-    const session = await this.stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      mode: 'payment',
-      customer_email: dto.receiptEmail,
-
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: cookbook.title,
-              images: [cookbook.cookbook_image],
-            },
-            unit_amount: Math.round(cookbook.price * 100),
-          },
-          quantity: 1,
-        },
-      ],
-
-      success_url: `${process.env.ALLOWED_ORIGIN}/payment-success`,
-      cancel_url: `${process.env.ALLOWED_ORIGIN}/payment-cancel`,
-
+    const session = await this.stripe.createCheckoutSession({
+      title: cookbook.title,
+      image: cookbook.cookbook_image,
+      price: cookbook.price,
+      receiptEmail: dto.receiptEmail,
       metadata: {
         cookbookId: dto.cookbookId,
         buyerId: userId,
@@ -159,6 +140,16 @@ export class CookbookPurchaseService {
     return { success: true, message: 'Orders retrieved', data };
   }
 
+  /**
+   * Move one order along its lifecycle.
+   *
+   * The transition itself is decided by `planTransition`, not here — which
+   * is what closes two holes. A chef could previously mark a `pending` order
+   * `delivered` without it ever being paid, because the DTO constrained the
+   * status *value* and nothing constrained the *move*. And a `refunded`
+   * order silently kept the stock it had consumed; the plan now carries the
+   * restore, and it is applied in the same step as the status write.
+   */
   async updatePaymentStatus(
     chefId: string,
     purchaseId: string,
@@ -182,6 +173,22 @@ export class CookbookPurchaseService {
       );
     }
 
+    const plan = planTransition(
+      purchase.paymentStatus as PaymentStatus,
+      paymentStatus as PaymentStatus,
+    );
+
+    if (!plan.ok) {
+      throw new BadRequestException(plan.reason);
+    }
+
+    if (plan.stockDelta !== 0) {
+      await this.cookbookModel.updateOne(
+        { _id: cookbook._id },
+        { $inc: { stockCount: plan.stockDelta } },
+      );
+    }
+
     purchase.paymentStatus = paymentStatus;
     await purchase.save();
 
@@ -192,297 +199,27 @@ export class CookbookPurchaseService {
     };
   }
 
-  async getChefEarningsAnalytics(
-    chefId: string,
-    period: string = 'lifetime',
-  ) {
-
-    const now = new Date();
-    let dateFrom: Date | undefined;
-    let groupFormat = '%Y-%m-%d';
-
-    switch (period) {
-      case 'daily':
-        dateFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        groupFormat = '%H:00';
-        break;
-      case 'weekly': {
-        const d = new Date(now);
-        d.setDate(d.getDate() - 6);
-        d.setHours(0, 0, 0, 0);
-        dateFrom = d;
-        break;
-      }
-      case 'monthly': {
-        const d = new Date(now);
-        d.setDate(d.getDate() - 29);
-        d.setHours(0, 0, 0, 0);
-        dateFrom = d;
-        break;
-      }
-    }
-
-    // Build match inline so Mongoose serialises ObjectId correctly
-    const chefOid = new Types.ObjectId(chefId);
-
-    const [totals, salesByDate] = await Promise.all([
-      this.purchaseModel.aggregate([
-        {
-          $match: {
-            chefId: chefOid,
-            paymentStatus: { $in: ['paid', 'shipped', 'delivered'] },
-            ...(dateFrom ? { createdAt: { $gte: dateFrom } } : {}),
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            totalEarned: { $sum: '$price' },
-            totalOrders: { $sum: 1 },
-          },
-        },
-      ]),
-
-      this.purchaseModel.aggregate([
-        {
-          $match: {
-            chefId: chefOid,
-            paymentStatus: { $in: ['paid', 'shipped', 'delivered'] },
-            ...(dateFrom ? { createdAt: { $gte: dateFrom } } : {}),
-          },
-        },
-        {
-          $group: {
-            _id: {
-              $dateToString: { format: groupFormat, date: '$createdAt' },
-            },
-            amount: { $sum: '$price' },
-            orders: { $sum: 1 },
-          },
-        },
-        { $sort: { _id: 1 } },
-        { $project: { _id: 0, date: '$_id', amount: 1, orders: 1 } },
-      ]),
-    ]);
-
-    const totalEarned = (totals[0]?.totalEarned as number) ?? 0;
-    const totalOrders = (totals[0]?.totalOrders as number) ?? 0;
-    const totalProfit = parseFloat((totalEarned * this.CHEF_PROFIT_RATE).toFixed(2));
-
-    return {
-      success: true,
-      statusCode: 200,
-      message: 'Chef earnings analytics retrieved successfully',
-      data: {
-        totalEarned: parseFloat(totalEarned.toFixed(2)),
-        totalProfit,
-        profitRate: `${this.CHEF_PROFIT_RATE * 100}%`,
-        totalOrders,
-        period,
-        salesGraph: salesByDate,
-      },
-    };
-  }
-
-  async getChefDashboardEarnings(chefId: string) {
-    const chefOid = new Types.ObjectId(chefId);
-
-    const [totals, recentOrders, topCookbooks, totalCookbooks] = await Promise.all([
-      this.purchaseModel.aggregate([
-        { $match: { chefId: chefOid, paymentStatus: { $in: ['paid', 'shipped', 'delivered'] } } },
-        {
-          $group: {
-            _id: null,
-            totalRevenue: { $sum: '$price' },
-            totalOrders: { $sum: 1 },
-          },
-        },
-      ]),
-
-      this.purchaseModel
-        .find({ chefId: chefOid })
-        .sort({ createdAt: -1 })
-        .limit(3)
-        .select(
-          'cookbookTitle cookbookImage price paymentStatus createdAt receiptEmail',
-        )
-        .lean(),
-
-      this.purchaseModel.aggregate([
-        { $match: { chefId: chefOid, paymentStatus: { $in: ['paid', 'shipped', 'delivered'] } } },
-        {
-          $group: {
-            _id: '$cookbookId',
-            cookbookTitle: { $first: '$cookbookTitle' },
-            cookbookImage: { $first: '$cookbookImage' },
-            totalSold: { $sum: 1 },
-            totalRevenue: { $sum: '$price' },
-          },
-        },
-        { $sort: { totalRevenue: -1 } },
-        { $limit: 3 },
-        {
-          $project: {
-            _id: 0,
-            cookbookId: '$_id',
-            cookbookTitle: 1,
-            cookbookImage: 1,
-            totalSold: 1,
-            totalRevenue: 1,
-          },
-        },
-      ]),
-
-      // One integer instead of GET /cookbooks/my-cookbooks?limit=100, which
-      // the dashboard was fetching in full so it could render `.length`.
-      this.cookbookModel.countDocuments({ authorId: chefOid }),
-    ]);
-
-    const totalRevenue = (totals[0]?.totalRevenue as number) ?? 0;
-    const totalOrders = (totals[0]?.totalOrders as number) ?? 0;
-
-    return {
-      success: true,
-      statusCode: 200,
-      message: 'Chef dashboard earnings retrieved',
-      data: {
-        totalCookbooks,
-        totalRevenue: parseFloat(totalRevenue.toFixed(2)),
-        totalProfit: parseFloat((totalRevenue * this.CHEF_PROFIT_RATE).toFixed(2)),
-        totalOrders,
-        recentOrders,
-        topCookbooks: topCookbooks.map((c) => ({
-          ...c,
-          totalRevenue: parseFloat((c.totalRevenue as number).toFixed(2)),
-        })),
-      },
-    };
-  }
-
-  async getAdminEarningsAnalytics() {
-
-    const [totals, salesByDate, top3MostSoldCookbooks] = await Promise.all([
-      this.purchaseModel.aggregate([
-        { $match: { paymentStatus: { $in: ['paid', 'shipped', 'delivered'] } } },
-        {
-          $group: {
-            _id: null,
-            totalRevenue: { $sum: '$price' },
-            totalOrders: { $sum: 1 },
-          },
-        },
-      ]),
-
-      this.purchaseModel.aggregate([
-        { $match: { paymentStatus: { $in: ['paid', 'shipped', 'delivered'] } } },
-        {
-          $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-            amount: { $sum: '$price' },
-            orders: { $sum: 1 },
-          },
-        },
-        { $sort: { _id: 1 } },
-        { $project: { _id: 0, date: '$_id', amount: 1, orders: 1 } },
-      ]),
-
-      this.purchaseModel.aggregate([
-        { $match: { paymentStatus: { $in: ['paid', 'shipped', 'delivered'] } } },
-        {
-          $group: {
-            _id: '$cookbookId',
-            cookbookTitle: { $first: '$cookbookTitle' },
-            cookbookImage: { $first: '$cookbookImage' },
-            totalSold: { $sum: 1 },
-            totalRevenue: { $sum: '$price' },
-          },
-        },
-        { $sort: { totalSold: -1 } },
-        { $limit: 3 },
-        {
-          $project: {
-            _id: 0,
-            cookbookId: '$_id',
-            cookbookTitle: 1,
-            cookbookImage: 1,
-            totalSold: 1,
-            totalRevenue: 1,
-          },
-        },
-      ]),
-    ]);
-
-    const totalRevenue = (totals[0]?.totalRevenue as number) ?? 0;
-    const totalOrders = (totals[0]?.totalOrders as number) ?? 0;
-    const totalProfit = parseFloat(
-      (totalRevenue * this.ADMIN_PROFIT_RATE).toFixed(2),
-    );
-
-    return {
-      success: true,
-      statusCode: 200,
-      message: 'Admin earnings analytics retrieved successfully',
-      data: {
-        totalRevenue: parseFloat(totalRevenue.toFixed(2)),
-        totalProfit,
-        profitRate: `${this.ADMIN_PROFIT_RATE * 100}%`,
-        totalOrders,
-        salesGraph: salesByDate,
-        top3MostSoldCookbooks,
-      },
-    };
-  }
-
-  async getAdminTopChefs() {
-    const topChefs = await this.purchaseModel.aggregate([
-      { $match: { paymentStatus: { $in: ['paid', 'shipped', 'delivered'] } } },
-      {
-        $group: {
-          _id: '$chefId',
-          totalRevenue: { $sum: '$price' },
-          totalSales: { $sum: 1 },
-        },
-      },
-      { $sort: { totalRevenue: -1 } },
-      { $limit: 5 },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'chefInfo',
-        },
-      },
-      { $unwind: '$chefInfo' },
-      {
-        $project: {
-          _id: 0,
-          chefId: '$_id',
-          fullName: '$chefInfo.fullName',
-          username: '$chefInfo.username',
-          profileUrl: '$chefInfo.profile_url',
-          totalRevenue: 1,
-          totalSales: 1,
-        },
-      },
-    ]);
-
-    return {
-      success: true,
-      statusCode: 200,
-      data: topChefs.map((c) => ({
-        ...c,
-        totalRevenue: parseFloat((c.totalRevenue as number).toFixed(2)),
-      })),
-    };
-  }
-
+  /**
+   * Turn a settled Stripe session into an order.
+   *
+   * Every early return here used to be silent — the buyer had paid, and the
+   * webhook simply declined to fulfil and kept the money. Two of those paths
+   * are genuinely reachable: a buyer who opens several checkout sessions
+   * before paying any of them can pass the daily cap at session-creation
+   * time and trip it at fulfillment time, and the last copy of a cookbook
+   * can sell between checkout and the webhook firing.
+   *
+   * Refusing to fulfil is still right in both cases. Keeping the money is
+   * not, so each refusal now compensates.
+   */
   async confirmPayment(session: Stripe.Checkout.Session): Promise<void> {
     if (session.payment_status !== 'paid') {
       return;
     }
 
-    const existing = await this.purchaseModel.findOne({
+    // Stripe retries webhooks; `stripeSessionId` is uniquely indexed, so an
+    // already-fulfilled session is a no-op rather than a second order.
+    const existing = await this.purchaseModel.exists({
       stripeSessionId: session.id,
     });
     if (existing) {
@@ -492,37 +229,59 @@ export class CookbookPurchaseService {
     const { cookbookId, buyerId, receiptEmail, billingAddress } =
       session.metadata as Record<string, string>;
 
-    const todayPurchases = await this.purchaseModel.countDocuments({
-      buyerId: new Types.ObjectId(buyerId),
-      createdAt: { $gte: this.startOfUTCDay() },
-    });
-    if (todayPurchases >= 5) {
-      this.logger.warn(
-        `Daily purchase limit exceeded for user ${buyerId} — skipping fulfillment`,
+    if ((await this.countPurchasesToday(buyerId)) >= DAILY_PURCHASE_LIMIT) {
+      await this.refundUnfulfillable(
+        session,
+        `buyer ${buyerId} is over the ${DAILY_PURCHASE_LIMIT}/day purchase limit`,
       );
       return;
     }
 
+    // Conditional decrement: two webhooks racing for the last copy cannot
+    // both win, because the `$gt: 0` is evaluated with the write.
     const cookbook = await this.cookbookModel.findOneAndUpdate(
       { _id: cookbookId, stockCount: { $gt: 0 } },
       { $inc: { stockCount: -1 } },
       { new: true },
     );
-    if (!cookbook) return;
 
-    await this.purchaseModel.create({
-      cookbookId: new Types.ObjectId(cookbookId),
-      buyerId: new Types.ObjectId(buyerId),
-      chefId: new Types.ObjectId(cookbook.authorId),
-      cookbookTitle: cookbook.title,
-      cookbookImage: cookbook.cookbook_image,
-      price: cookbook.price,
-      stripeSessionId: session.id,
-      paymentStatus: 'paid',
-      billingAddress: JSON.parse(billingAddress || '{}'),
-      receiptEmail,
-    });
+    if (!cookbook) {
+      await this.refundUnfulfillable(
+        session,
+        `cookbook ${cookbookId} went out of stock before fulfillment`,
+      );
+      return;
+    }
 
+    try {
+      await this.purchaseModel.create({
+        cookbookId: new Types.ObjectId(cookbookId),
+        buyerId: new Types.ObjectId(buyerId),
+        chefId: new Types.ObjectId(cookbook.authorId),
+        cookbookTitle: cookbook.title,
+        cookbookImage: cookbook.cookbook_image,
+        price: cookbook.price,
+        stripeSessionId: session.id,
+        paymentStatus: 'paid',
+        billingAddress: JSON.parse(billingAddress || '{}'),
+        receiptEmail,
+      });
+    } catch (err) {
+      // The stock is already spent at this point. Put it back before
+      // bailing out, or a failed write permanently destroys a copy.
+      await this.cookbookModel.updateOne(
+        { _id: cookbook._id },
+        { $inc: { stockCount: 1 } },
+      );
+      this.logger.error(
+        `Failed to record purchase for session ${session.id}; stock restored`,
+        err,
+      );
+      await this.refundUnfulfillable(session, 'order could not be recorded');
+      return;
+    }
+
+    // Best effort — the order exists whether or not the receipt lands.
     try {
       await this.mailService.sendPurchaseReceipt(receiptEmail, {
         cookbookTitle: cookbook.title,
@@ -536,5 +295,13 @@ export class CookbookPurchaseService {
         err,
       );
     }
+  }
+
+  private async refundUnfulfillable(
+    session: Stripe.Checkout.Session,
+    reason: string,
+  ): Promise<void> {
+    this.logger.warn(`Refunding session ${session.id}: ${reason}`);
+    await this.stripe.refundSession(session);
   }
 }

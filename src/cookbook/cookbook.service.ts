@@ -6,9 +6,11 @@ import {
 } from '@nestjs/common';
 import { CreateCookbookDto } from './dto/create-cookbook.dto';
 import { UpdateCookbookDto } from './dto/update-cookbook.dto';
+import { AdminUpdateCookbookDto } from './dto/admin-update-cookbook.dto';
 import { CloudinaryService } from '../services/cloudinary.service';
 import { User } from '../user/schema/user.schema';
 import { Cookbook } from './schemas/cookbook.schema';
+import { hideDemoAuthors } from '../common/demo-visibility';
 import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { NotificationService } from '../notifications/notification.service';
@@ -66,9 +68,9 @@ export class CookbookService {
         message: `${user.fullName} just published a new cookbook: "${createCookbookDto.title}"`,
         actorName: user.fullName,
         actorAvatar: user.profile_url,
-        targetId: cookbook._id as Types.ObjectId,
+        targetId: cookbook._id,
         thumbnail: cookbook_image,
-        chefId: user._id as Types.ObjectId,
+        chefId: user._id,
       })
       .catch((err) => this.logger.warn('Notification dispatch failed', err));
 
@@ -89,20 +91,17 @@ export class CookbookService {
 
     if (author) {
       const authorUsers = await this.userModel
-        .find({ fullName: { $regex: author, $options: 'i' }, isDemo: { $ne: true } })
+        .find({
+          fullName: { $regex: author, $options: 'i' },
+          isDemo: { $ne: true },
+        })
         .select('_id');
       if (!authorUsers.length) return this.emptyCookbookResponse(page, limit);
       query.authorId = { $in: authorUsers.map((u) => u._id) };
     } else {
-      // Seeded demo accounts (see seed-demo-accounts.js) publish cookbooks
-      // so their own dashboard/analytics has something to show — those
-      // never belong in the catalogue a real visitor browses.
-      const demoAuthors = await this.userModel
-        .find({ isDemo: true })
-        .select('_id');
-      if (demoAuthors.length > 0) {
-        query.authorId = { $nin: demoAuthors.map((u) => u._id) };
-      }
+      // No author asked for, so this is the public catalogue: hide the
+      // seeded demo accounts' cookbooks.
+      Object.assign(query, await hideDemoAuthors(this.userModel));
     }
 
     const [data, total] = await Promise.all([
@@ -225,7 +224,14 @@ export class CookbookService {
   }
 
   async applyGlobalDiscount(discount: number) {
-    await this.cookbookModel.updateMany({}, { $set: { discount } });
+    // runValidators: Mongoose skips schema validators on $set unless told
+    // otherwise, so without this the min/max on `discount` never runs. The DTO
+    // is the first line of defence; this is the one that guards the database.
+    await this.cookbookModel.updateMany(
+      {},
+      { $set: { discount } },
+      { runValidators: true },
+    );
 
     if (discount > 0) {
       this.notificationService
@@ -244,14 +250,11 @@ export class CookbookService {
     };
   }
 
-  async adminUpdate(
-    id: string,
-    dto: { price?: number; stockCount?: number; discount?: number; title?: string; description?: string },
-  ) {
+  async adminUpdate(id: string, dto: AdminUpdateCookbookDto) {
     const cookbook = await this.cookbookModel.findById(id);
     if (!cookbook) throw new NotFoundException('Cookbook not found');
     const updated = await this.cookbookModel
-      .findByIdAndUpdate(id, { $set: dto }, { new: true })
+      .findByIdAndUpdate(id, { $set: dto }, { new: true, runValidators: true })
       .populate('authorId', 'fullName username email profile_url');
     return { success: true, message: 'Cookbook updated', data: updated };
   }
@@ -282,7 +285,7 @@ export class CookbookService {
        from Cloudinary, so a surviving "New Cookbook" notification would
        point at a missing image and a missing page. */
     await this.notificationService
-      .deleteByTarget(cookbook._id as Types.ObjectId)
+      .deleteByTarget(cookbook._id)
       .catch((err) =>
         this.logger.warn(
           'Notification cleanup failed after cookbook delete',

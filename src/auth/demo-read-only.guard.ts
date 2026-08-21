@@ -1,8 +1,14 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { SKIP_DEMO_GUARD_KEY } from './skip-demo-guard.decorator';
+import { readSession } from './session';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -30,6 +36,9 @@ export class DemoReadOnlyGuard implements CanActivate {
     private reflector: Reflector,
   ) {}
 
+  // Signature kept as Promise<boolean>. readSession is synchronous now, but
+  // this guard's public contract is not the place for that detail to leak out.
+  // eslint-disable-next-line @typescript-eslint/require-await
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
 
@@ -37,41 +46,20 @@ export class DemoReadOnlyGuard implements CanActivate {
       return true;
     }
 
-    const skip = this.reflector.getAllAndOverride<boolean>(SKIP_DEMO_GUARD_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const skip = this.reflector.getAllAndOverride<boolean>(
+      SKIP_DEMO_GUARD_KEY,
+      [context.getHandler(), context.getClass()],
+    );
     if (skip) {
       return true;
     }
 
-    const token = this.extractToken(request);
-    if (!token) {
-      return true;
-    }
+    const payload = readSession(this.jwtService, request);
 
-    try {
-      const payload = await this.jwtService.verifyAsync<{
-        isDemo?: boolean;
-      }>(token, { secret: process.env.JWT_SECRET });
-
-      if (payload.isDemo) {
-        throw new ForbiddenException('Demo accounts are read-only.');
-      }
-    } catch (err) {
-      if (err instanceof ForbiddenException) throw err;
-      // Invalid/expired token — AuthGuard (or the route itself) is
-      // responsible for rejecting it, not this guard.
+    if (payload?.isDemo) {
+      throw new ForbiddenException('Demo accounts are read-only.');
     }
 
     return true;
-  }
-
-  private extractToken(request: Request): string | undefined {
-    if (request.cookies?.access_token) {
-      return request.cookies.access_token;
-    }
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
   }
 }

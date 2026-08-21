@@ -15,11 +15,13 @@ import { Role, Roles } from '../auth/roles.decorator';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { BatchStatsDto } from './dto/batch-stats.dto';
 import { Throttle } from '@nestjs/throttler';
+import { EngagementAnalyticsService } from './engagement-analytics.service';
 
 @Controller('recipe-interaction')
 export class RecipeInteractionController {
   constructor(
     private readonly recipeInteractionService: RecipeInteractionService,
+    private readonly analytics: EngagementAnalyticsService,
   ) {}
 
   @Throttle({ default: { limit: 30, ttl: 60000 } })
@@ -65,14 +67,14 @@ export class RecipeInteractionController {
     @Req() req: Request & { user: { sub: string } },
     @Query('period') period?: string,
   ) {
-    return this.recipeInteractionService.getChefAnalytics(req.user.sub, period);
+    return this.analytics.getChefAnalytics(req.user.sub, period);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
   @Get('/analytics/admin')
   getAdminAnalytics() {
-    return this.recipeInteractionService.getAdminStats();
+    return this.analytics.getAdminStats();
   }
 
   @UseGuards(AuthGuard, RolesGuard)

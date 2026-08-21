@@ -6,7 +6,15 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
+import { readSession } from './session';
 
+/**
+ * Route-scoped, on login/register. Someone already holding a session has no
+ * business creating another one.
+ *
+ * Any verifiable token counts, refresh tokens included — unlike AuthGuard,
+ * this guard is asking "are you signed in?", not "may you call the API?".
+ */
 @Injectable()
 export class AlreadyLoggedInGuard implements CanActivate {
   constructor(private jwtService: JwtService) {}
@@ -14,19 +22,12 @@ export class AlreadyLoggedInGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
 
-    const token =
-      request.cookies?.access_token ??
-      request.headers.authorization?.split(' ')[1];
-
-    if (!token) return true;
-
-    try {
-      this.jwtService.verify(token, { secret: process.env.JWT_SECRET });
+    if (readSession(this.jwtService, request)) {
       throw new ForbiddenException('Already authenticated');
-    } catch (err) {
-      if (err instanceof ForbiddenException) throw err;
-      // Expired or invalid token — let the request through
-      return true;
     }
+
+    // No token, or one that does not verify: an expired session should still
+    // be able to reach the login page.
+    return true;
   }
 }

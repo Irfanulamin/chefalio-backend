@@ -19,6 +19,8 @@ import {
 import { CookbookService } from './cookbook.service';
 import { CreateCookbookDto } from './dto/create-cookbook.dto';
 import { UpdateCookbookDto } from './dto/update-cookbook.dto';
+import { AdminUpdateCookbookDto } from './dto/admin-update-cookbook.dto';
+import { ApplyGlobalDiscountDto } from './dto/apply-global-discount.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Role, Roles } from '../auth/roles.decorator';
@@ -118,8 +120,8 @@ export class CookbookController {
   @Patch('admin/discount/global')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.Admin)
-  applyGlobalDiscount(@Body('discount') discount: number) {
-    return this.cookbookService.applyGlobalDiscount(discount);
+  applyGlobalDiscount(@Body() dto: ApplyGlobalDiscountDto) {
+    return this.cookbookService.applyGlobalDiscount(dto.discount);
   }
 
   @Patch('admin/:id')
@@ -127,7 +129,7 @@ export class CookbookController {
   @Roles(Role.Admin)
   adminUpdate(
     @Param('id', ParseObjectIdPipe) id: string,
-    @Body() dto: { price?: number; stockCount?: number; discount?: number; title?: string; description?: string },
+    @Body() dto: AdminUpdateCookbookDto,
   ) {
     return this.cookbookService.adminUpdate(id, dto);
   }

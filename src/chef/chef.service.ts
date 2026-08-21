@@ -6,6 +6,8 @@ import { Recipe } from '../recipe/schemas/recipe.schema';
 import { Cookbook } from '../cookbook/schemas/cookbook.schema';
 import { ChefProfile } from '../chef-profile/schemas/chef-profile.schema';
 import { FollowService } from '../follow/follow.service';
+import { publicChefFilter } from '../common/demo-visibility';
+import { paginated } from '../common/api-response';
 
 @Injectable()
 export class ChefService {
@@ -24,14 +26,7 @@ export class ChefService {
     search: string = '',
     viewerId?: string,
   ) {
-    // isDemo excluded: the seeded demo chef (see seed-demo-accounts.js)
-    // needs its own dashboard populated, but a real visitor browsing the
-    // public chef directory shouldn't land on it.
-    const filter: Record<string, any> = {
-      role: 'chef',
-      isActive: true,
-      isDemo: { $ne: true },
-    };
+    const filter: Record<string, any> = publicChefFilter();
 
     if (search) {
       filter.$or = [
@@ -114,10 +109,10 @@ export class ChefService {
 
   // GET /chefs/count — total number of active chefs
   async getChefCount() {
-    const total = await this.userModel.countDocuments({
-      role: 'chef',
-      isActive: true,
-    });
+    // Same rule as getAllChefs, not a second copy of it — this number is the
+    // headline above that very list, so counting anyone the list hides makes
+    // the page contradict itself.
+    const total = await this.userModel.countDocuments(publicChefFilter());
     return {
       success: true,
       statusCode: 200,
@@ -166,7 +161,7 @@ export class ChefService {
   // GET /chefs/:id/recipes — recipes by a specific chef
   async getChefRecipes(id: string, page: number, limit: number) {
     const chef = await this.resolveChef(id);
-    const chefId = chef._id as Types.ObjectId;
+    const chefId = chef._id;
 
     const [recipes, total] = await Promise.all([
       this.recipeModel
@@ -178,26 +173,19 @@ export class ChefService {
       this.recipeModel.countDocuments({ authorId: chefId }),
     ]);
 
-    return {
-      success: true,
-      statusCode: 200,
-      message: 'Chef recipes retrieved successfully',
-      data: {
-        recipes,
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
-      },
-    };
+    return paginated(
+      recipes,
+      'Chef recipes retrieved successfully',
+      total,
+      page,
+      limit,
+    );
   }
 
   // GET /chefs/:id/cookbooks — cookbooks by a specific chef
   async getChefCookbooks(id: string, page: number, limit: number) {
     const chef = await this.resolveChef(id);
-    const chefId = chef._id as Types.ObjectId;
+    const chefId = chef._id;
 
     const [cookbooks, total] = await Promise.all([
       this.cookbookModel
@@ -213,20 +201,13 @@ export class ChefService {
       }),
     ]);
 
-    return {
-      success: true,
-      statusCode: 200,
-      message: 'Chef cookbooks retrieved successfully',
-      data: {
-        cookbooks,
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
-      },
-    };
+    return paginated(
+      cookbooks,
+      'Chef cookbooks retrieved successfully',
+      total,
+      page,
+      limit,
+    );
   }
 
   /**
@@ -242,7 +223,7 @@ export class ChefService {
    */
   async getRelatedChefs(id: string, limit: number = 4, viewerId?: string) {
     const chef = await this.resolveChef(id);
-    const chefId = chef._id as Types.ObjectId;
+    const chefId = chef._id;
 
     const excludeIds = [chefId];
     if (viewerId) excludeIds.push(new Types.ObjectId(viewerId));
